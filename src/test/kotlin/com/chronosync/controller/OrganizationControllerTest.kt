@@ -1,0 +1,293 @@
+package com.chronosync.controller
+
+import com.chronosync.dto.organization.InviteUserRequest
+import com.chronosync.dto.organization.UpdateUserRoleRequest
+import com.chronosync.entity.*
+import com.chronosync.repository.*
+import com.chronosync.security.JwtUtil
+import com.fasterxml.jackson.databind.ObjectMapper
+import org.junit.jupiter.api.BeforeEach
+import org.junit.jupiter.api.Test
+import org.springframework.beans.factory.annotation.Autowired
+import org.springframework.boot.test.autoconfigure.web.servlet.AutoConfigureMockMvc
+import org.springframework.boot.test.context.SpringBootTest
+import org.springframework.http.MediaType
+import org.springframework.test.web.servlet.MockMvc
+import org.springframework.test.web.servlet.MvcResult
+import java.time.Instant
+import java.time.temporal.ChronoUnit
+import java.util.UUID
+
+@SpringBootTest
+@AutoConfigureMockMvc
+class OrganizationControllerTest {
+
+    @Autowired
+    private lateinit var mockMvc: MockMvc
+
+    @Autowired
+    private lateinit var objectMapper: ObjectMapper
+
+    @Autowired
+    private lateinit var jwtUtil: JwtUtil
+
+    @Autowired
+    private lateinit var userRepository: UserRepository
+
+    @Autowired
+    private lateinit var organizationRepository: OrganizationRepository
+
+    @Autowired
+    private lateinit var organizationUserRepository: OrganizationUserRepository
+
+    private lateinit var testUser: User
+    private lateinit var testOrganization: Organization
+    private lateinit var token: String
+    private lateinit var organizationId: UUID
+
+    @BeforeEach
+    fun setUp() {
+        organizationUserRepository.deleteAll()
+        organizationRepository.deleteAll()
+        userRepository.deleteAll()
+
+        testUser = User(
+            email = "orgtest@example.com",
+            password = "password123",
+            firstName = "Org",
+            lastName = "Admin",
+            status = UserStatus.ACTIVE
+        )
+        testUser = userRepository.save(testUser)
+
+        testOrganization = Organization(
+            name = "Organization Test Org",
+            plan = Plan.FREE,
+            scheduleLimit = 100,
+            currentUsage = 0,
+            nextReset = Instant.now().plus(30, ChronoUnit.DAYS)
+        )
+        testOrganization = organizationRepository.save(testOrganization)
+        organizationId = testOrganization.id
+
+        val orgUser = OrganizationUser(
+            user = testUser,
+            organization = testOrganization,
+            role = OrganizationRole.OWNER,
+            status = OrganizationUserStatus.ACTIVE
+        )
+        organizationUserRepository.save(orgUser)
+
+        token = jwtUtil.generateToken(
+            testUser.id,
+            testUser.email,
+            organizationId,
+            OrganizationRole.OWNER.name
+        )
+    }
+
+    @Test
+    fun `get organization users returns user list`() {
+        val memberUser = User(
+            email = "member@example.com",
+            password = "password123",
+            status = UserStatus.ACTIVE
+        )
+        val savedMember = userRepository.save(memberUser)
+
+        val orgUser = OrganizationUser(
+            user = savedMember,
+            organization = testOrganization,
+            role = OrganizationRole.MEMBER,
+            status = OrganizationUserStatus.ACTIVE
+        )
+        organizationUserRepository.save(orgUser)
+
+        val result: MvcResult = mockMvc.perform(
+            org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get("/api/organization/users")
+                .header("Authorization", "Bearer $token")
+        ).andExpect(
+            org.springframework.test.web.servlet.result.MockMvcResultMatchers.status().isOk
+        ).andReturn()
+
+        val response = objectMapper.readValue(
+            result.response.contentAsString,
+            com.chronosync.dto.common.ApiResponse::class.java
+        )
+
+        org.junit.jupiter.api.Assertions.assertTrue(response.success)
+        org.junit.jupiter.api.Assertions.assertNotNull(response.data)
+    }
+
+    @Test
+    fun `get user dropdowns returns user list`() {
+        val memberUser = User(
+            email = "dropdown@example.com",
+            password = "password123",
+            status = UserStatus.ACTIVE
+        )
+        val savedMember = userRepository.save(memberUser)
+
+        val orgUser = OrganizationUser(
+            user = savedMember,
+            organization = testOrganization,
+            role = OrganizationRole.MEMBER,
+            status = OrganizationUserStatus.ACTIVE
+        )
+        organizationUserRepository.save(orgUser)
+
+        val result: MvcResult = mockMvc.perform(
+            org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get("/api/organization/users/dropdown")
+                .header("Authorization", "Bearer $token")
+        ).andExpect(
+            org.springframework.test.web.servlet.result.MockMvcResultMatchers.status().isOk
+        ).andReturn()
+
+        val response = objectMapper.readValue(
+            result.response.contentAsString,
+            com.chronosync.dto.common.ApiResponse::class.java
+        )
+
+        org.junit.jupiter.api.Assertions.assertTrue(response.success)
+    }
+
+    @Test
+    fun `invite new user returns success`() {
+        val request = InviteUserRequest(
+            email = "invited@example.com",
+            role = "MEMBER"
+        )
+
+        val result: MvcResult = mockMvc.perform(
+            org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post("/api/organization/invite")
+                .header("Authorization", "Bearer $token")
+                .contentType(MediaType.APPLICATION_JSON)
+                .content(objectMapper.writeValueAsString(request))
+        ).andExpect(
+            org.springframework.test.web.servlet.result.MockMvcResultMatchers.status().isCreated
+        ).andReturn()
+
+        val response = objectMapper.readValue(
+            result.response.contentAsString,
+            com.chronosync.dto.common.ApiResponse::class.java
+        )
+
+        org.junit.jupiter.api.Assertions.assertTrue(response.success)
+        org.junit.jupiter.api.Assertions.assertEquals("Invitation sent successfully", response.message)
+    }
+
+    @Test
+    fun `update user role returns success`() {
+        val memberUser = User(
+            email = "updaterole@example.com",
+            password = "password123",
+            status = UserStatus.ACTIVE
+        )
+        val savedMember = userRepository.save(memberUser)
+
+        val orgUser = OrganizationUser(
+            user = savedMember,
+            organization = testOrganization,
+            role = OrganizationRole.MEMBER,
+            status = OrganizationUserStatus.ACTIVE
+        )
+        val savedOrgUser = organizationUserRepository.save(orgUser)
+
+        val request = UpdateUserRoleRequest(
+            role = "MANAGER"
+        )
+
+        val result: MvcResult = mockMvc.perform(
+            org.springframework.test.web.servlet.request.MockMvcRequestBuilders.put("/api/organization/users/${savedOrgUser.user.id}/role")
+                .header("Authorization", "Bearer $token")
+                .contentType(MediaType.APPLICATION_JSON)
+                .content(objectMapper.writeValueAsString(request))
+        ).andExpect(
+            org.springframework.test.web.servlet.result.MockMvcResultMatchers.status().isOk
+        ).andReturn()
+
+        val response = objectMapper.readValue(
+            result.response.contentAsString,
+            com.chronosync.dto.common.ApiResponse::class.java
+        )
+
+        org.junit.jupiter.api.Assertions.assertTrue(response.success)
+    }
+
+    @Test
+    fun `remove user returns success`() {
+        val memberUser = User(
+            email = "remove@example.com",
+            password = "password123",
+            status = UserStatus.ACTIVE
+        )
+        val savedMember = userRepository.save(memberUser)
+
+        val orgUser = OrganizationUser(
+            user = savedMember,
+            organization = testOrganization,
+            role = OrganizationRole.MEMBER,
+            status = OrganizationUserStatus.ACTIVE
+        )
+        val savedOrgUser = organizationUserRepository.save(orgUser)
+
+        mockMvc.perform(
+            org.springframework.test.web.servlet.request.MockMvcRequestBuilders.delete("/api/organization/users/${savedOrgUser.user.id}")
+                .header("Authorization", "Bearer $token")
+        ).andExpect(
+            org.springframework.test.web.servlet.result.MockMvcResultMatchers.status().isOk
+        )
+
+        val deleted = organizationUserRepository.findByUserIdAndOrganizationId(savedMember.id, organizationId)
+        org.junit.jupiter.api.Assertions.assertNull(deleted)
+    }
+
+    @Test
+    fun `cannot remove owner returns bad request`() {
+        mockMvc.perform(
+            org.springframework.test.web.servlet.request.MockMvcRequestBuilders.delete("/api/organization/users/${testUser.id}")
+                .header("Authorization", "Bearer $token")
+        ).andExpect(
+            org.springframework.test.web.servlet.result.MockMvcResultMatchers.status().isBadRequest
+        )
+    }
+
+    @Test
+    fun `member cannot invite users`() {
+        val memberUser = User(
+            email = "memberinvite@example.com",
+            password = "password123",
+            status = UserStatus.ACTIVE
+        )
+        val savedMember = userRepository.save(memberUser)
+
+        val orgUser = OrganizationUser(
+            user = savedMember,
+            organization = testOrganization,
+            role = OrganizationRole.MEMBER,
+            status = OrganizationUserStatus.ACTIVE
+        )
+        organizationUserRepository.save(orgUser)
+
+        val memberToken = jwtUtil.generateToken(
+            savedMember.id,
+            savedMember.email,
+            organizationId,
+            OrganizationRole.MEMBER.name
+        )
+
+        val request = InviteUserRequest(
+            email = "newuser@example.com",
+            role = "MEMBER"
+        )
+
+        mockMvc.perform(
+            org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post("/api/organization/invite")
+                .header("Authorization", "Bearer $memberToken")
+                .contentType(MediaType.APPLICATION_JSON)
+                .content(objectMapper.writeValueAsString(request))
+        ).andExpect(
+            org.springframework.test.web.servlet.result.MockMvcResultMatchers.status().isBadRequest
+        )
+    }
+}

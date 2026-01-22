@@ -1,0 +1,56 @@
+version: '3.8'
+
+services:
+  app:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: chronosync-app
+    ports:
+      - "8080:8080"
+    environment:
+      - DATABASE_HOST=db
+      - DATABASE_PORT=5432
+      - DATABASE_NAME=chronosync
+      - DATABASE_USERNAME=postgres
+      - DATABASE_PASSWORD=postgres
+      - APP_HOST=0.0.0.0
+      - APP_PORT=8080
+      - JWT_SECRET=chronosync-jwt-secret-key-for-authentication-must-be-at-least-256-bits-long
+      - JWT_EXPIRATION=86400000
+    depends_on:
+      - db
+    networks:
+      - chronosync-network
+
+  db:
+    image: postgres:16-alpine
+    container_name: chronosync-db
+    environment:
+      - POSTGRES_USER=postgres
+      - POSTGRES_PASSWORD=postgres
+      - POSTGRES_DB=chronosync
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    ports:
+      - "5432:5432"
+    networks:
+      - chronosync-network
+
+  flyway:
+    image: flyway/flyway:latest
+    container_name: chronosync-flyway
+    command: -url=jdbc:postgresql://db:5432/chronosync -user=postgres -password=postgres -locations=filesystem:/opt/flyway/sql migrate
+    volumes:
+      - ./src/main/resources/db/migration:/opt/flyway/sql
+    depends_on:
+      - db
+    networks:
+      - chronosync-network
+
+networks:
+  chronosync-network:
+    driver: bridge
+
+volumes:
+  postgres_data:
