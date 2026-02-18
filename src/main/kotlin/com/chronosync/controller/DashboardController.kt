@@ -15,7 +15,7 @@ class DashboardController(
 ) {
 
     @GetMapping("/today")
-    fun getTodayDashboard(@CurrentUser principal: UserPrincipal): ResponseEntity<ApiResponse<Any>> {
+    fun getTodayDashboard(@CurrentUser principal: UserPrincipal): ResponseEntity<ApiResponse<TodayScheduleResponse>> {
         return try {
             val response = scheduleService.getTodaySchedules(principal)
             ResponseEntity.ok(ApiResponse(success = true, data = response))

@@ -1,9 +1,8 @@
 package com.chronosync.service
 
-import com.chronosync.dto.profile.OrganizationInfo
+import com.chronosync.dto.profile.OrganizationInfoProfileDto
 import com.chronosync.dto.profile.ProfileResponse
 import com.chronosync.dto.profile.UpdateProfileRequest
-import com.chronosync.entity.User
 import com.chronosync.repository.OrganizationUserRepository
 import com.chronosync.repository.UserRepository
 import com.chronosync.security.UserPrincipal
@@ -22,7 +21,7 @@ class ProfileService(
         val userOrganizations = organizationUserRepository.findByUserId(principal.id)
 
         val organizations = userOrganizations.map { orgUser ->
-            OrganizationInfo(
+            OrganizationInfoProfileDto(
                 id = orgUser.organization.id.toString(),
                 name = orgUser.organization.name,
                 plan = orgUser.organization.plan.name,

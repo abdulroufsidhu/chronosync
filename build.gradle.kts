@@ -36,6 +36,7 @@ dependencies {
     implementation("org.postgresql:postgresql:42.7.1")
     implementation("org.yaml:snakeyaml:2.2")
     implementation("org.springdoc:springdoc-openapi-starter-webmvc-ui:2.3.0")
+    implementation("org.springframework.boot:spring-boot-starter-mail")
 
     testImplementation("org.springframework.boot:spring-boot-starter-test")
     testImplementation("org.springframework.security:spring-security-test")

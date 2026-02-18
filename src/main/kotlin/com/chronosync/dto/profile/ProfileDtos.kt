@@ -24,10 +24,10 @@ data class ProfileResponse(
     val role: String,
 
     @Schema(description = "List of organizations the user belongs to with their roles")
-    val organizations: List<OrganizationInfo>
+    val organizations: List<OrganizationInfoProfileDto>
 )
 
-data class OrganizationInfo(
+data class OrganizationInfoProfileDto(
     @Schema(description = "Organization UUID")
     val id: String,
 

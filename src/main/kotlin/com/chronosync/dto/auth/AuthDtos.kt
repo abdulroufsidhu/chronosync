@@ -18,10 +18,10 @@ data class RegisterRequest(
     val password: String,
 
     @Schema(description = "Organization details")
-    val organization: OrganizationInfo
+    val organization: OrganizationInfoRegisterDto
 )
 
-data class OrganizationInfo(
+data class OrganizationInfoRegisterDto(
     @Schema(description = "Name of the organization", example = "My Salon")
     val name: String,
 
@@ -72,4 +72,27 @@ data class OrganizationDto(
 
     @Schema(description = "User's role in the organization", example = "OWNER")
     val role: String
+)
+
+data class ForgotPasswordRequest(
+    @Schema(description = "User email address", example = "user@example.com")
+    val email: String
+)
+
+data class ResetPasswordRequest(
+    @Schema(description = "Reset token from email", example = "abc123token")
+    val token: String,
+
+    @Schema(description = "New password", example = "NewSecureP@ss123")
+    val newPassword: String
+)
+
+data class MagicLinkRequest(
+    @Schema(description = "User email address", example = "user@example.com")
+    val email: String
+)
+
+data class TokenResponse(
+    @Schema(description = "Success message")
+    val message: String
 )

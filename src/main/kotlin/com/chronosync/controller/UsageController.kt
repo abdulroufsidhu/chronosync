@@ -1,6 +1,9 @@
 package com.chronosync.controller
 
 import com.chronosync.dto.common.ApiResponse
+import com.chronosync.dto.usage.SubscribeRequest
+import com.chronosync.dto.usage.UpgradeResponse
+import com.chronosync.dto.usage.UsageResponse
 import com.chronosync.security.CurrentUser
 import com.chronosync.security.UserPrincipal
 import com.chronosync.service.UsageService
@@ -14,7 +17,7 @@ class UsageController(
 ) {
 
     @GetMapping("/usage")
-    fun getUsage(@CurrentUser principal: UserPrincipal): ResponseEntity<ApiResponse<Any>> {
+    fun getUsage(@CurrentUser principal: UserPrincipal): ResponseEntity<ApiResponse<UsageResponse>> {
         return try {
             val response = usageService.getUsage(principal)
             ResponseEntity.ok(ApiResponse(success = true, data = response))
@@ -24,7 +27,7 @@ class UsageController(
     }
 
     @GetMapping("/billing/plans")
-    fun getUpgradePlans(): ResponseEntity<ApiResponse<Any>> {
+    fun getUpgradePlans(): ResponseEntity<ApiResponse<UpgradeResponse>> {
         return try {
             val response = usageService.getUpgradePlans()
             ResponseEntity.ok(ApiResponse(success = true, data = response))
@@ -36,10 +39,10 @@ class UsageController(
     @PostMapping("/billing/subscribe")
     fun upgradePlan(
         @CurrentUser principal: UserPrincipal,
-        @RequestBody request: Map<String, String>
-    ): ResponseEntity<ApiResponse<Any>> {
+        @RequestBody request: SubscribeRequest
+    ): ResponseEntity<ApiResponse<UsageResponse>> {
         return try {
-            val planName = request["plan"] ?: throw IllegalArgumentException("Plan is required")
+            val planName = request.plan ?: throw IllegalArgumentException("Plan is required")
             val response = usageService.upgradePlan(principal, planName)
             ResponseEntity.ok(ApiResponse(success = true, data = response))
         } catch (e: IllegalArgumentException) {

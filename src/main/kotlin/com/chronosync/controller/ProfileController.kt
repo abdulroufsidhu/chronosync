@@ -1,6 +1,7 @@
 package com.chronosync.controller
 
 import com.chronosync.dto.common.ApiResponse
+import com.chronosync.dto.profile.ProfileResponse
 import com.chronosync.dto.profile.UpdateProfileRequest
 import com.chronosync.security.CurrentUser
 import com.chronosync.security.UserPrincipal
@@ -15,7 +16,7 @@ class ProfileController(
 ) {
 
     @GetMapping
-    fun getProfile(@CurrentUser principal: UserPrincipal): ResponseEntity<ApiResponse<Any>> {
+    fun getProfile(@CurrentUser principal: UserPrincipal): ResponseEntity<ApiResponse<ProfileResponse>> {
         return try {
             val response = profileService.getProfile(principal)
             ResponseEntity.ok(ApiResponse(success = true, data = response))
@@ -28,7 +29,7 @@ class ProfileController(
     fun updateProfile(
         @CurrentUser principal: UserPrincipal,
         @RequestBody request: UpdateProfileRequest
-    ): ResponseEntity<ApiResponse<Any>> {
+    ): ResponseEntity<ApiResponse<ProfileResponse>> {
         return try {
             val response = profileService.updateProfile(principal, request)
             ResponseEntity.ok(ApiResponse(success = true, data = response))

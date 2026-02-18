@@ -1,12 +1,8 @@
 package com.chronosync.service
 
 import com.chronosync.dto.auth.*
-import com.chronosync.entity.Organization
-import com.chronosync.entity.OrganizationRole
-import com.chronosync.entity.OrganizationUser
-import com.chronosync.entity.OrganizationUserStatus
-import com.chronosync.entity.User
-import com.chronosync.entity.UserStatus
+import com.chronosync.entity.*
+import com.chronosync.repository.AuthTokenRepository
 import com.chronosync.repository.OrganizationRepository
 import com.chronosync.repository.OrganizationUserRepository
 import com.chronosync.repository.UserRepository
@@ -14,18 +10,27 @@ import com.chronosync.security.JwtUtil
 import org.springframework.security.crypto.password.PasswordEncoder
 import org.springframework.stereotype.Service
 import org.springframework.transaction.annotation.Transactional
+import java.security.SecureRandom
 import java.time.Instant
 import java.time.temporal.ChronoUnit
-import java.util.UUID
+import java.util.*
 
 @Service
 class AuthService(
     private val userRepository: UserRepository,
     private val organizationRepository: OrganizationRepository,
     private val organizationUserRepository: OrganizationUserRepository,
+    private val authTokenRepository: AuthTokenRepository,
     private val passwordEncoder: PasswordEncoder,
-    private val jwtUtil: JwtUtil
+    private val jwtUtil: JwtUtil,
+    private val emailService: EmailService
 ) {
+
+    companion object {
+        private const val TOKEN_LENGTH = 32
+        private const val PASSWORD_RESET_EXPIRY_HOURS = 1L
+        private const val MAGIC_LINK_EXPIRY_MINUTES = 15L
+    }
 
     @Transactional
     fun login(request: LoginRequest): AuthResponse {
@@ -123,5 +128,146 @@ class AuthService(
                 role = ownerRole.name
             )
         )
+    }
+
+    @Transactional
+    fun forgotPassword(email: String) {
+        val user = userRepository.findByEmailAndStatus(email, UserStatus.ACTIVE)
+            ?: return // Don't reveal if email exists
+
+        // Invalidate any existing password reset tokens
+        authTokenRepository.deleteByUserIdAndType(user.id, AuthTokenType.PASSWORD_RESET)
+
+        // Generate new token
+        val token = generateSecureToken()
+        val expiresAt = Instant.now().plus(PASSWORD_RESET_EXPIRY_HOURS, ChronoUnit.HOURS)
+
+        val authToken = AuthToken(
+            user = user,
+            token = token,
+            type = AuthTokenType.PASSWORD_RESET,
+            expiresAt = expiresAt
+        )
+        authTokenRepository.save(authToken)
+
+        // Send email asynchronously
+        emailService.sendPasswordResetEmail(email, token)
+    }
+
+    @Transactional
+    fun resetPassword(token: String, newPassword: String): AuthResponse {
+        val authToken = authTokenRepository.findByTokenAndType(token, AuthTokenType.PASSWORD_RESET)
+            ?: throw IllegalArgumentException("Invalid or expired token")
+
+        if (!authToken.isValid()) {
+            throw IllegalArgumentException("Invalid or expired token")
+        }
+
+        // Validate password strength
+        if (newPassword.length < 8) {
+            throw IllegalArgumentException("Password must be at least 8 characters long")
+        }
+
+        val user = authToken.user
+
+        // Update password
+        val encodedPassword = passwordEncoder.encode(newPassword)
+        val updatedUser = user.copy(
+            password = encodedPassword,
+            updatedAt = Instant.now()
+        )
+        userRepository.save(updatedUser)
+
+        // Mark token as used
+        val usedToken = authToken.copy(usedAt = Instant.now())
+        authTokenRepository.save(usedToken)
+
+        // Generate JWT and return auth response
+        return createAuthResponse(updatedUser)
+    }
+
+    @Transactional
+    fun requestMagicLink(email: String) {
+        val user = userRepository.findByEmailAndStatus(email, UserStatus.ACTIVE)
+
+        if (user != null) {
+            // Invalidate any existing magic link tokens
+            authTokenRepository.deleteByUserIdAndType(user.id, AuthTokenType.MAGIC_LINK)
+
+            // Generate new token
+            val token = generateSecureToken()
+            val expiresAt = Instant.now().plus(MAGIC_LINK_EXPIRY_MINUTES, ChronoUnit.MINUTES)
+
+            val authToken = AuthToken(
+                user = user,
+                token = token,
+                type = AuthTokenType.MAGIC_LINK,
+                expiresAt = expiresAt
+            )
+            authTokenRepository.save(authToken)
+
+            // Send email asynchronously
+            emailService.sendMagicLinkEmail(email, token)
+        }
+        // Don't reveal if email exists or not
+    }
+
+    @Transactional
+    fun verifyMagicLink(token: String): AuthResponse {
+        val authToken = authTokenRepository.findByTokenAndType(token, AuthTokenType.MAGIC_LINK)
+            ?: throw IllegalArgumentException("Invalid or expired magic link")
+
+        if (!authToken.isValid()) {
+            throw IllegalArgumentException("Invalid or expired magic link")
+        }
+
+        val user = authToken.user
+
+        // Mark token as used
+        val usedToken = authToken.copy(usedAt = Instant.now())
+        authTokenRepository.save(usedToken)
+
+        // If email is not verified, mark it as verified
+        if (!user.emailVerified) {
+            val updatedUser = user.copy(emailVerified = true, updatedAt = Instant.now())
+            userRepository.save(updatedUser)
+            return createAuthResponse(updatedUser)
+        }
+
+        return createAuthResponse(user)
+    }
+
+    private fun createAuthResponse(user: User): AuthResponse {
+        val orgUser = organizationUserRepository.findByUserId(user.id).firstOrNull()
+            ?: throw IllegalStateException("User not associated with any organization")
+
+        val token = jwtUtil.generateToken(
+            userId = user.id,
+            email = user.email,
+            organizationId = orgUser.organization.id,
+            role = orgUser.role.name
+        )
+
+        return AuthResponse(
+            accessToken = token,
+            user = UserDto(
+                id = user.id.toString(),
+                email = user.email,
+                role = orgUser.role.name
+            ),
+            organization = OrganizationDto(
+                id = orgUser.organization.id.toString(),
+                name = orgUser.organization.name,
+                plan = orgUser.organization.plan.name,
+                role = orgUser.role.name
+            )
+        )
+    }
+
+    private fun generateSecureToken(): String {
+        val random = SecureRandom()
+        val bytes = ByteArray(TOKEN_LENGTH)
+        random.nextBytes(bytes)
+        return Base64.getUrlEncoder().withoutPadding().encodeToString(bytes)
     }
 }

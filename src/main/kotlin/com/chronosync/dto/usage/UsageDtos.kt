@@ -3,6 +3,24 @@ package com.chronosync.dto.usage
 import io.swagger.v3.oas.annotations.media.Schema
 import java.time.Instant
 
+data class SubscribeRequest(
+    @Schema(
+        description = "Current subscription plan and is required",
+        examples = ["FREE", "PRO", "ENTERPRISE"]
+    )
+    val plan: String?,
+    @Schema(
+        description = "Payment varification token to varify payment ( planned for future ) ",
+        example = "123adsf234afds2"
+    )
+    val paymentId: String?,
+    @Schema(
+        description = "Payment Method ( planned for future )",
+        examples = ["Google", "Apple", "MyFatoorah", "Alflalah", "Easypesa", "JazzCash", "Nayapay"]
+    )
+    val paymentMethod: String?,
+)
+
 data class UsageResponse(
     @Schema(description = "Current subscription plan", example = "FREE")
     val plan: String,

@@ -17,7 +17,7 @@ class OrganizationController(
 ) {
 
     @GetMapping("/users")
-    fun getUsers(@CurrentUser principal: UserPrincipal): ResponseEntity<ApiResponse<Any>> {
+    fun getUsers(@CurrentUser principal: UserPrincipal): ResponseEntity<ApiResponse<List<UserListDto>>> {
         return try {
             val response = organizationService.getOrganizationUsers(principal)
             ResponseEntity.ok(ApiResponse(success = true, data = response))
@@ -27,7 +27,7 @@ class OrganizationController(
     }
 
     @GetMapping("/users/dropdown")
-    fun getUserDropdowns(@CurrentUser principal: UserPrincipal): ResponseEntity<ApiResponse<Any>> {
+    fun getUserDropdowns(@CurrentUser principal: UserPrincipal): ResponseEntity<ApiResponse<List<UserDropdownDto>>> {
         return try {
             val response = organizationService.getUserDropdowns(principal)
             ResponseEntity.ok(ApiResponse(success = true, data = response))
@@ -40,7 +40,7 @@ class OrganizationController(
     fun inviteUser(
         @CurrentUser principal: UserPrincipal,
         @RequestBody request: InviteUserRequest
-    ): ResponseEntity<ApiResponse<Any>> {
+    ): ResponseEntity<ApiResponse<Nothing>> {
         return try {
             organizationService.inviteUser(principal, request)
             ResponseEntity.status(HttpStatus.CREATED).body(ApiResponse(success = true, message = "Invitation sent successfully"))
@@ -53,7 +53,7 @@ class OrganizationController(
     fun removeUser(
         @CurrentUser principal: UserPrincipal,
         @PathVariable id: UUID
-    ): ResponseEntity<ApiResponse<Any>> {
+    ): ResponseEntity<ApiResponse<Nothing>> {
         return try {
             organizationService.removeUser(principal, id)
             ResponseEntity.ok(ApiResponse(success = true, message = "User removed successfully"))
@@ -67,7 +67,7 @@ class OrganizationController(
         @CurrentUser principal: UserPrincipal,
         @PathVariable id: UUID,
         @RequestBody request: UpdateUserRoleRequest
-    ): ResponseEntity<ApiResponse<Any>> {
+    ): ResponseEntity<ApiResponse<Nothing>> {
         return try {
             organizationService.updateUserRole(principal, id, request)
             ResponseEntity.ok(ApiResponse(success = true, message = "User role updated successfully"))

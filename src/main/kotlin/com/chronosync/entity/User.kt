@@ -30,6 +30,9 @@ data class User(
     @Column(nullable = false)
     val status: UserStatus = UserStatus.ACTIVE,
 
+    @Column(name = "email_verified", nullable = false)
+    val emailVerified: Boolean = false,
+
     @Column(name = "created_at", nullable = false, updatable = false)
     val createdAt: Instant = Instant.now(),
 

@@ -19,7 +19,7 @@ class ScheduleController(
 ) {
 
     @GetMapping("/today")
-    fun getTodaySchedules(@CurrentUser principal: UserPrincipal): ResponseEntity<ApiResponse<Any>> {
+    fun getTodaySchedules(@CurrentUser principal: UserPrincipal): ResponseEntity<ApiResponse<TodayScheduleResponse>> {
         return try {
             val response = scheduleService.getTodaySchedules(principal)
             ResponseEntity.ok(ApiResponse(success = true, data = response))
@@ -33,7 +33,7 @@ class ScheduleController(
         @CurrentUser principal: UserPrincipal,
         @RequestParam @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) from: LocalDate,
         @RequestParam @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) to: LocalDate
-    ): ResponseEntity<ApiResponse<Any>> {
+    ): ResponseEntity<ApiResponse<ScheduleListResponse>> {
         return try {
             val response = scheduleService.getSchedules(principal, from, to)
             ResponseEntity.ok(ApiResponse(success = true, data = response))
@@ -46,7 +46,7 @@ class ScheduleController(
     fun getSchedule(
         @CurrentUser principal: UserPrincipal,
         @PathVariable id: UUID
-    ): ResponseEntity<ApiResponse<Any>> {
+    ): ResponseEntity<ApiResponse<ScheduleDto>> {
         return try {
             val response = scheduleService.getSchedule(principal, id)
             ResponseEntity.ok(ApiResponse(success = true, data = response))
@@ -59,7 +59,7 @@ class ScheduleController(
     fun createSchedule(
         @CurrentUser principal: UserPrincipal,
         @RequestBody request: CreateScheduleRequest
-    ): ResponseEntity<ApiResponse<Any>> {
+    ): ResponseEntity<ApiResponse<ScheduleDto>> {
         return try {
             val response = scheduleService.createSchedule(principal, request)
             ResponseEntity.status(HttpStatus.CREATED).body(ApiResponse(success = true, data = response))
@@ -73,7 +73,7 @@ class ScheduleController(
         @CurrentUser principal: UserPrincipal,
         @PathVariable id: UUID,
         @RequestBody request: UpdateScheduleRequest
-    ): ResponseEntity<ApiResponse<Any>> {
+    ): ResponseEntity<ApiResponse<ScheduleDto>> {
         return try {
             val response = scheduleService.updateSchedule(principal, id, request)
             ResponseEntity.ok(ApiResponse(success = true, data = response))
@@ -86,7 +86,7 @@ class ScheduleController(
     fun deleteSchedule(
         @CurrentUser principal: UserPrincipal,
         @PathVariable id: UUID
-    ): ResponseEntity<ApiResponse<Any>> {
+    ): ResponseEntity<ApiResponse<Nothing>> {
         return try {
             scheduleService.deleteSchedule(principal, id)
             ResponseEntity.ok(ApiResponse(success = true, message = "Schedule deleted successfully"))
