@@ -46,6 +46,13 @@ Environment configuration guide for the ChronoSync backend.
 |----------|----------|---------|-------------|
 | `EMAIL_FROM` | No | `noreply@chronosync.com` | Default sender email |
 
+### Timezone
+
+| Variable | Required | Default | Description |
+|----------|----------|---------|-------------|
+| `IP_API_ENABLED` | No | `true` | Enable IP-based timezone detection |
+| `IP_API_URL` | No | `https://ipapi.co` | IP geolocation service URL |
+
 ## Configuration Files
 
 ### application.yml
@@ -76,6 +83,10 @@ jwt:
 app:
   frontend-url: ${FRONTEND_URL:http://localhost:3000}
   email-from: ${EMAIL_FROM:noreply@chronosync.com}
+  timezone:
+    ip-api:
+      enabled: ${IP_API_ENABLED:true}
+      url: ${IP_API_URL:https://ipapi.co}
 ```
 
 ### Environment File
@@ -130,12 +141,20 @@ EMAIL_FROM=noreply@chronosync.com
 ### Docker Development
 
 ```bash
-# Start all services
-docker-compose up -d
+# Start database
+docker compose up -d db
+
+# Run application with auto-migrations
+./gradlew bootRun
+
+# Or build and run in Docker
+docker compose up --build -d app
 
 # View logs
-docker-compose logs -f app
+docker compose logs -f app
 ```
+
+**Note:** Migrations run automatically when the Spring Boot application starts. No separate Flyway service needed.
 
 ## Production Setup
 
@@ -210,15 +229,55 @@ logging:
 
 ## Database Migrations
 
-Database migrations are managed by Flyway and located in:
+Database migrations are managed by Spring Boot Flyway and located in:
 
 ```
 src/main/resources/db/migration/
 ```
 
-Migrations run automatically on application startup.
+### How It Works
+
+- Migrations run **automatically** on application startup
+- No manual steps or separate Docker services needed
+- Flyway tracks applied migrations in `flyway_schema_history` table
+- Failed migrations will prevent application startup
+
+### Migration Naming Convention
+
+```
+V{version}__{description}.sql
+```
+
+Examples:
+- `V1__create_initial_schema.sql`
+- `V2__seed_plans.sql`
+- `V4__timezone_and_notifications.sql`
+
+### Configuration
+
+```yaml
+spring:
+  flyway:
+    enabled: true
+    locations: classpath:db/migration
+    baseline-on-migrate: true
+    clean-disabled: true  # Safety: prevents accidental data loss in production
+```
+
+### Troubleshooting
+
+**Migration fails to apply:**
+1. Check migration SQL syntax
+2. Verify database connectivity
+3. Review application logs for error details
+4. Ensure migration version numbers are sequential
+
+**Need to rollback:**
+- Flyway doesn't support rollback in Community Edition
+- Create a new migration to undo changes (e.g., `V5__undo_changes.sql`)
 
 ## Related Documentation
 
 - [Authentication Overview](./authentication-overview.md)
 - [Magic Link Authentication](./magic-link.md)
+- [Schedule Notifications](./schedule-notifications.md)

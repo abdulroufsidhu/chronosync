@@ -497,4 +497,75 @@ class AuthControllerTest {
             status().isBadRequest
         )
     }
+
+    @Test
+    fun `register with timezone creates organization with timezone`() {
+        val request = RegisterRequest(
+            email = "timezoneuser@example.com",
+            password = "password123",
+            organization = OrganizationInfoRegisterDto(
+                name = "Timezone Organization",
+                services = listOf("haircut"),
+                type = "salon",
+                role = "OWNER",
+                timezone = "America/New_York"
+            )
+        )
+
+        val result: MvcResult = mockMvc.perform(
+            post("/api/auth/register")
+                .contentType(MediaType.APPLICATION_JSON)
+                .content(objectMapper.writeValueAsString(request))
+        ).andExpect(
+            status().isOk
+        ).andReturn()
+
+        val response = objectMapper.readValue(
+            result.response.contentAsString,
+            com.chronosync.dto.common.ApiResponse::class.java
+        )
+
+        assertTrue(response.success)
+
+        val data = objectMapper.writeValueAsString(response.data)
+        val authResponse = objectMapper.readValue(data, AuthResponse::class.java)
+        assertEquals("America/New_York", authResponse.organization.timezone)
+
+        // Verify in database
+        val org = organizationRepository.findAll().first()
+        assertEquals("America/New_York", org.timezone)
+    }
+
+    @Test
+    fun `register without timezone defaults to UTC`() {
+        val request = RegisterRequest(
+            email = "utcuser@example.com",
+            password = "password123",
+            organization = OrganizationInfoRegisterDto(
+                name = "UTC Organization",
+                services = listOf("haircut"),
+                type = "salon",
+                role = "OWNER"
+            )
+        )
+
+        val result: MvcResult = mockMvc.perform(
+            post("/api/auth/register")
+                .contentType(MediaType.APPLICATION_JSON)
+                .content(objectMapper.writeValueAsString(request))
+        ).andExpect(
+            status().isOk
+        ).andReturn()
+
+        val response = objectMapper.readValue(
+            result.response.contentAsString,
+            com.chronosync.dto.common.ApiResponse::class.java
+        )
+
+        assertTrue(response.success)
+
+        val data = objectMapper.writeValueAsString(response.data)
+        val authResponse = objectMapper.readValue(data, AuthResponse::class.java)
+        assertEquals("UTC", authResponse.organization.timezone)
+    }
 }

@@ -6,13 +6,31 @@ This folder contains comprehensive documentation for the ChronoSync backend API.
 
 - [Authentication Overview](./authentication-overview.md)
 - [Magic Link Authentication](./magic-link.md) - Passwordless email-based login
+- [Schedule Notifications](./schedule-notifications.md) - Email notifications with calendar integration
 - [API Reference](./api-reference.md)
 - [Configuration](./configuration.md)
+
+## New Features
+
+### 🌍 Organization Timezone Support
+Each organization can now have its own timezone setting:
+- Timezone is auto-detected from IP during registration
+- All schedule times are displayed in the organization's timezone
+- Automatic DST (Daylight Saving Time) handling
+- See [Schedule Notifications](./schedule-notifications.md) for details
+
+### 📧 Schedule Email Notifications
+When schedules are created, updated, or cancelled:
+- **Staff members** receive email notifications with appointment details
+- **Clients** receive confirmation emails with calendar attachments
+- **ICS calendar files** compatible with Google, Outlook, Apple Calendar
+- **Direct calendar links** for one-click adding
 
 ## Quick Links
 
 - [Authentication Flow](#authentication-flow)
 - [Magic Link Special Cases](#magic-link-special-cases)
+- [Schedule Notifications](./schedule-notifications.md)
 
 ## Authentication Flow
 

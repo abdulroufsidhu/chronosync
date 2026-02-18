@@ -108,7 +108,27 @@ All API responses follow this format:
 ### Date/Time Format
 
 - Dates: ISO 8601 format (`2024-01-15`)
-- DateTime: ISO 8601 format (`2024-01-15T10:30:00Z`)
+- DateTime: ISO 8601 format (`2024-01-15T10:30:00Z`) - All times are in UTC
+- Timezone: IANA format (e.g., `America/New_York`, `Europe/London`)
+
+### Timezone Handling
+
+All schedule times are stored and returned in UTC. The API includes a `timezone` field in responses:
+
+```json
+{
+  "id": "uuid",
+  "title": "Appointment",
+  "startDateTime": "2024-01-15T14:00:00Z",
+  "endDateTime": "2024-01-15T15:00:00Z",
+  "timezone": "America/New_York",
+  "organization": {
+    "timezone": "America/New_York"
+  }
+}
+```
+
+The frontend should use the `timezone` field to display times in the organization's local time.
 
 ### Pagination
 
