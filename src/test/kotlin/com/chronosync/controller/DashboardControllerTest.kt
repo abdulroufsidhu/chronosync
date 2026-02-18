@@ -1,22 +1,28 @@
 package com.chronosync.controller
 
+import com.chronosync.config.TestSecurityConfig
 import com.chronosync.entity.*
 import com.chronosync.repository.*
 import com.chronosync.security.JwtUtil
 import com.fasterxml.jackson.databind.ObjectMapper
+import org.junit.jupiter.api.Assertions.*
 import org.junit.jupiter.api.BeforeEach
 import org.junit.jupiter.api.Test
 import org.springframework.beans.factory.annotation.Autowired
 import org.springframework.boot.test.autoconfigure.web.servlet.AutoConfigureMockMvc
 import org.springframework.boot.test.context.SpringBootTest
+import org.springframework.context.annotation.Import
 import org.springframework.test.web.servlet.MockMvc
 import org.springframework.test.web.servlet.MvcResult
+import org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get
+import org.springframework.test.web.servlet.result.MockMvcResultMatchers.status
 import java.time.Instant
 import java.time.temporal.ChronoUnit
-import java.util.UUID
+import java.util.*
 
 @SpringBootTest
 @AutoConfigureMockMvc
+@Import(TestSecurityConfig::class)
 class DashboardControllerTest {
 
     @Autowired
@@ -107,10 +113,10 @@ class DashboardControllerTest {
         scheduleRepository.save(schedule2)
 
         val result: MvcResult = mockMvc.perform(
-            org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get("/api/dashboard/today")
+            get("/api/dashboard/today")
                 .header("Authorization", "Bearer $token")
         ).andExpect(
-            org.springframework.test.web.servlet.result.MockMvcResultMatchers.status().isOk
+            status().isOk
         ).andReturn()
 
         val response = objectMapper.readValue(
@@ -118,25 +124,25 @@ class DashboardControllerTest {
             com.chronosync.dto.common.ApiResponse::class.java
         )
 
-        org.junit.jupiter.api.Assertions.assertTrue(response.success)
-        org.junit.jupiter.api.Assertions.assertNotNull(response.data)
+        assertTrue(response.success)
+        assertNotNull(response.data)
 
         val dataJson = objectMapper.writeValueAsString(response.data)
         val todayResponse = objectMapper.readValue(dataJson, com.chronosync.dto.schedule.TodayScheduleResponse::class.java)
 
-        org.junit.jupiter.api.Assertions.assertEquals(java.time.LocalDate.now().toString(), todayResponse.date)
-        org.junit.jupiter.api.Assertions.assertEquals("OWNER", todayResponse.userRole)
-        org.junit.jupiter.api.Assertions.assertEquals(5, todayResponse.usage.used)
-        org.junit.jupiter.api.Assertions.assertEquals(100, todayResponse.usage.limit)
+        assertEquals(java.time.LocalDate.now().toString(), todayResponse.date)
+        assertEquals("OWNER", todayResponse.userRole)
+        assertEquals(5, todayResponse.usage.used)
+        assertEquals(100, todayResponse.usage.limit)
     }
 
     @Test
     fun `get today dashboard returns empty schedules when none exist`() {
         val result: MvcResult = mockMvc.perform(
-            org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get("/api/dashboard/today")
+            get("/api/dashboard/today")
                 .header("Authorization", "Bearer $token")
         ).andExpect(
-            org.springframework.test.web.servlet.result.MockMvcResultMatchers.status().isOk
+            status().isOk
         ).andReturn()
 
         val response = objectMapper.readValue(
@@ -144,7 +150,7 @@ class DashboardControllerTest {
             com.chronosync.dto.common.ApiResponse::class.java
         )
 
-        org.junit.jupiter.api.Assertions.assertTrue(response.success)
+        assertTrue(response.success)
     }
 
     @Test
@@ -189,10 +195,10 @@ class DashboardControllerTest {
         scheduleRepository.save(otherSchedule)
 
         val result: MvcResult = mockMvc.perform(
-            org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get("/api/dashboard/today")
+            get("/api/dashboard/today")
                 .header("Authorization", "Bearer $memberToken")
         ).andExpect(
-            org.springframework.test.web.servlet.result.MockMvcResultMatchers.status().isOk
+            status().isOk
         ).andReturn()
 
         val response = objectMapper.readValue(
@@ -200,20 +206,20 @@ class DashboardControllerTest {
             com.chronosync.dto.common.ApiResponse::class.java
         )
 
-        org.junit.jupiter.api.Assertions.assertTrue(response.success)
+        assertTrue(response.success)
 
         val dataJson = objectMapper.writeValueAsString(response.data)
         val todayResponse = objectMapper.readValue(dataJson, com.chronosync.dto.schedule.TodayScheduleResponse::class.java)
 
-        org.junit.jupiter.api.Assertions.assertEquals("MEMBER", todayResponse.userRole)
+        assertEquals("MEMBER", todayResponse.userRole)
     }
 
     @Test
     fun `unauthorized access to dashboard returns 403`() {
         mockMvc.perform(
-            org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get("/api/dashboard/today")
+            get("/api/dashboard/today")
         ).andExpect(
-            org.springframework.test.web.servlet.result.MockMvcResultMatchers.status().isForbidden
+            status().isForbidden
         )
     }
 }

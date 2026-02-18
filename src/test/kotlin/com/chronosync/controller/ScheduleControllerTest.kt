@@ -1,25 +1,31 @@
 package com.chronosync.controller
 
+import com.chronosync.config.TestSecurityConfig
 import com.chronosync.dto.schedule.CreateScheduleRequest
 import com.chronosync.dto.schedule.UpdateScheduleRequest
 import com.chronosync.entity.*
 import com.chronosync.repository.*
 import com.chronosync.security.JwtUtil
 import com.fasterxml.jackson.databind.ObjectMapper
+import org.junit.jupiter.api.Assertions.*
 import org.junit.jupiter.api.BeforeEach
 import org.junit.jupiter.api.Test
 import org.springframework.beans.factory.annotation.Autowired
 import org.springframework.boot.test.autoconfigure.web.servlet.AutoConfigureMockMvc
 import org.springframework.boot.test.context.SpringBootTest
+import org.springframework.context.annotation.Import
 import org.springframework.http.MediaType
 import org.springframework.test.web.servlet.MockMvc
 import org.springframework.test.web.servlet.MvcResult
+import org.springframework.test.web.servlet.request.MockMvcRequestBuilders.*
+import org.springframework.test.web.servlet.result.MockMvcResultMatchers.status
 import java.time.Instant
 import java.time.temporal.ChronoUnit
-import java.util.UUID
+import java.util.*
 
 @SpringBootTest
 @AutoConfigureMockMvc
+@Import(TestSecurityConfig::class)
 class ScheduleControllerTest {
 
     @Autowired
@@ -103,10 +109,10 @@ class ScheduleControllerTest {
         scheduleRepository.save(schedule)
 
         val result: MvcResult = mockMvc.perform(
-            org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get("/api/schedules/today")
+            get("/api/schedules/today")
                 .header("Authorization", "Bearer $token")
         ).andExpect(
-            org.springframework.test.web.servlet.result.MockMvcResultMatchers.status().isOk
+            status().isOk
         ).andReturn()
 
         val response = objectMapper.readValue(
@@ -114,8 +120,8 @@ class ScheduleControllerTest {
             com.chronosync.dto.common.ApiResponse::class.java
         )
 
-        org.junit.jupiter.api.Assertions.assertTrue(response.success)
-        org.junit.jupiter.api.Assertions.assertNotNull(response.data)
+        assertTrue(response.success)
+        assertNotNull(response.data)
     }
 
     @Test
@@ -133,12 +139,12 @@ class ScheduleControllerTest {
         val to = today.plusDays(7).toString()
 
         val result: MvcResult = mockMvc.perform(
-            org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get("/api/schedules")
+            get("/api/schedules")
                 .header("Authorization", "Bearer $token")
                 .param("from", from)
                 .param("to", to)
         ).andExpect(
-            org.springframework.test.web.servlet.result.MockMvcResultMatchers.status().isOk
+            status().isOk
         ).andReturn()
 
         val response = objectMapper.readValue(
@@ -146,7 +152,7 @@ class ScheduleControllerTest {
             com.chronosync.dto.common.ApiResponse::class.java
         )
 
-        org.junit.jupiter.api.Assertions.assertTrue(response.success)
+        assertTrue(response.success)
     }
 
     @Test
@@ -164,12 +170,12 @@ class ScheduleControllerTest {
         )
 
         val result: MvcResult = mockMvc.perform(
-            org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post("/api/schedules")
+            post("/api/schedules")
                 .header("Authorization", "Bearer $token")
                 .contentType(MediaType.APPLICATION_JSON)
                 .content(objectMapper.writeValueAsString(request))
         ).andExpect(
-            org.springframework.test.web.servlet.result.MockMvcResultMatchers.status().isCreated
+            status().isCreated
         ).andReturn()
 
         val response = objectMapper.readValue(
@@ -177,8 +183,8 @@ class ScheduleControllerTest {
             com.chronosync.dto.common.ApiResponse::class.java
         )
 
-        org.junit.jupiter.api.Assertions.assertTrue(response.success)
-        org.junit.jupiter.api.Assertions.assertNotNull(response.data)
+        assertTrue(response.success)
+        assertNotNull(response.data)
     }
 
     @Test
@@ -193,10 +199,10 @@ class ScheduleControllerTest {
         val savedSchedule = scheduleRepository.save(schedule)
 
         val result: MvcResult = mockMvc.perform(
-            org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get("/api/schedules/${savedSchedule.id}")
+            get("/api/schedules/${savedSchedule.id}")
                 .header("Authorization", "Bearer $token")
         ).andExpect(
-            org.springframework.test.web.servlet.result.MockMvcResultMatchers.status().isOk
+            status().isOk
         ).andReturn()
 
         val response = objectMapper.readValue(
@@ -204,7 +210,7 @@ class ScheduleControllerTest {
             com.chronosync.dto.common.ApiResponse::class.java
         )
 
-        org.junit.jupiter.api.Assertions.assertTrue(response.success)
+        assertTrue(response.success)
     }
 
     @Test
@@ -226,12 +232,12 @@ class ScheduleControllerTest {
         )
 
         val result: MvcResult = mockMvc.perform(
-            org.springframework.test.web.servlet.request.MockMvcRequestBuilders.put("/api/schedules/${savedSchedule.id}")
+            put("/api/schedules/${savedSchedule.id}")
                 .header("Authorization", "Bearer $token")
                 .contentType(MediaType.APPLICATION_JSON)
                 .content(objectMapper.writeValueAsString(request))
         ).andExpect(
-            org.springframework.test.web.servlet.result.MockMvcResultMatchers.status().isOk
+            status().isOk
         ).andReturn()
 
         val response = objectMapper.readValue(
@@ -239,7 +245,7 @@ class ScheduleControllerTest {
             com.chronosync.dto.common.ApiResponse::class.java
         )
 
-        org.junit.jupiter.api.Assertions.assertTrue(response.success)
+        assertTrue(response.success)
     }
 
     @Test
@@ -253,22 +259,22 @@ class ScheduleControllerTest {
         val savedSchedule = scheduleRepository.save(schedule)
 
         mockMvc.perform(
-            org.springframework.test.web.servlet.request.MockMvcRequestBuilders.delete("/api/schedules/${savedSchedule.id}")
+            delete("/api/schedules/${savedSchedule.id}")
                 .header("Authorization", "Bearer $token")
         ).andExpect(
-            org.springframework.test.web.servlet.result.MockMvcResultMatchers.status().isOk
+            status().isOk
         )
 
         val deletedSchedule = scheduleRepository.findById(savedSchedule.id)
-        org.junit.jupiter.api.Assertions.assertTrue(deletedSchedule.isEmpty)
+        assertTrue(deletedSchedule.isEmpty)
     }
 
     @Test
     fun `unauthorized access returns 403`() {
         mockMvc.perform(
-            org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get("/api/schedules/today")
+            get("/api/schedules/today")
         ).andExpect(
-            org.springframework.test.web.servlet.result.MockMvcResultMatchers.status().isForbidden
+            status().isForbidden
         )
     }
 
@@ -303,12 +309,12 @@ class ScheduleControllerTest {
         )
 
         mockMvc.perform(
-            org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post("/api/schedules")
+            post("/api/schedules")
                 .header("Authorization", "Bearer $memberToken")
                 .contentType(MediaType.APPLICATION_JSON)
                 .content(objectMapper.writeValueAsString(request))
         ).andExpect(
-            org.springframework.test.web.servlet.result.MockMvcResultMatchers.status().isBadRequest
+            status().isBadRequest
         )
     }
 }

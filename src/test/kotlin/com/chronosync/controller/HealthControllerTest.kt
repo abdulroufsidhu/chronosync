@@ -1,14 +1,20 @@
 package com.chronosync.controller
 
+import com.chronosync.config.TestSecurityConfig
+import org.junit.jupiter.api.Assertions.assertEquals
 import org.junit.jupiter.api.Test
 import org.springframework.beans.factory.annotation.Autowired
 import org.springframework.boot.test.autoconfigure.web.servlet.AutoConfigureMockMvc
 import org.springframework.boot.test.context.SpringBootTest
+import org.springframework.context.annotation.Import
 import org.springframework.test.web.servlet.MockMvc
 import org.springframework.test.web.servlet.MvcResult
+import org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get
+import org.springframework.test.web.servlet.result.MockMvcResultMatchers.status
 
 @SpringBootTest
 @AutoConfigureMockMvc
+@Import(TestSecurityConfig::class)
 class HealthControllerTest {
 
     @Autowired
@@ -17,11 +23,11 @@ class HealthControllerTest {
     @Test
     fun `health endpoint returns healthy status`() {
         val result: MvcResult = mockMvc.perform(
-            org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get("/api/health")
+            get("/api/health")
         ).andExpect(
-            org.springframework.test.web.servlet.result.MockMvcResultMatchers.status().isOk
+            status().isOk
         ).andReturn()
 
-        org.junit.jupiter.api.Assertions.assertEquals("{\"status\":\"healthy\"}", result.response.contentAsString)
+        assertEquals("{\"status\":\"healthy\"}", result.response.contentAsString)
     }
 }

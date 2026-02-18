@@ -1,25 +1,31 @@
 package com.chronosync.controller
 
+import com.chronosync.config.TestSecurityConfig
 import com.chronosync.dto.organization.InviteUserRequest
 import com.chronosync.dto.organization.UpdateUserRoleRequest
 import com.chronosync.entity.*
 import com.chronosync.repository.*
 import com.chronosync.security.JwtUtil
 import com.fasterxml.jackson.databind.ObjectMapper
+import org.junit.jupiter.api.Assertions.*
 import org.junit.jupiter.api.BeforeEach
 import org.junit.jupiter.api.Test
 import org.springframework.beans.factory.annotation.Autowired
 import org.springframework.boot.test.autoconfigure.web.servlet.AutoConfigureMockMvc
 import org.springframework.boot.test.context.SpringBootTest
+import org.springframework.context.annotation.Import
 import org.springframework.http.MediaType
 import org.springframework.test.web.servlet.MockMvc
 import org.springframework.test.web.servlet.MvcResult
+import org.springframework.test.web.servlet.request.MockMvcRequestBuilders.*
+import org.springframework.test.web.servlet.result.MockMvcResultMatchers.status
 import java.time.Instant
 import java.time.temporal.ChronoUnit
-import java.util.UUID
+import java.util.*
 
 @SpringBootTest
 @AutoConfigureMockMvc
+@Import(TestSecurityConfig::class)
 class OrganizationControllerTest {
 
     @Autowired
@@ -104,10 +110,10 @@ class OrganizationControllerTest {
         organizationUserRepository.save(orgUser)
 
         val result: MvcResult = mockMvc.perform(
-            org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get("/api/organization/users")
+            get("/api/organization/users")
                 .header("Authorization", "Bearer $token")
         ).andExpect(
-            org.springframework.test.web.servlet.result.MockMvcResultMatchers.status().isOk
+            status().isOk
         ).andReturn()
 
         val response = objectMapper.readValue(
@@ -115,8 +121,8 @@ class OrganizationControllerTest {
             com.chronosync.dto.common.ApiResponse::class.java
         )
 
-        org.junit.jupiter.api.Assertions.assertTrue(response.success)
-        org.junit.jupiter.api.Assertions.assertNotNull(response.data)
+        assertTrue(response.success)
+        assertNotNull(response.data)
     }
 
     @Test
@@ -137,10 +143,10 @@ class OrganizationControllerTest {
         organizationUserRepository.save(orgUser)
 
         val result: MvcResult = mockMvc.perform(
-            org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get("/api/organization/users/dropdown")
+            get("/api/organization/users/dropdown")
                 .header("Authorization", "Bearer $token")
         ).andExpect(
-            org.springframework.test.web.servlet.result.MockMvcResultMatchers.status().isOk
+            status().isOk
         ).andReturn()
 
         val response = objectMapper.readValue(
@@ -148,7 +154,7 @@ class OrganizationControllerTest {
             com.chronosync.dto.common.ApiResponse::class.java
         )
 
-        org.junit.jupiter.api.Assertions.assertTrue(response.success)
+        assertTrue(response.success)
     }
 
     @Test
@@ -159,12 +165,12 @@ class OrganizationControllerTest {
         )
 
         val result: MvcResult = mockMvc.perform(
-            org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post("/api/organization/invite")
+            post("/api/organization/invite")
                 .header("Authorization", "Bearer $token")
                 .contentType(MediaType.APPLICATION_JSON)
                 .content(objectMapper.writeValueAsString(request))
         ).andExpect(
-            org.springframework.test.web.servlet.result.MockMvcResultMatchers.status().isCreated
+            status().isCreated
         ).andReturn()
 
         val response = objectMapper.readValue(
@@ -172,8 +178,8 @@ class OrganizationControllerTest {
             com.chronosync.dto.common.ApiResponse::class.java
         )
 
-        org.junit.jupiter.api.Assertions.assertTrue(response.success)
-        org.junit.jupiter.api.Assertions.assertEquals("Invitation sent successfully", response.message)
+        assertTrue(response.success)
+        assertEquals("Invitation sent successfully", response.message)
     }
 
     @Test
@@ -198,12 +204,12 @@ class OrganizationControllerTest {
         )
 
         val result: MvcResult = mockMvc.perform(
-            org.springframework.test.web.servlet.request.MockMvcRequestBuilders.put("/api/organization/users/${savedOrgUser.user.id}/role")
+            put("/api/organization/users/${savedOrgUser.user.id}/role")
                 .header("Authorization", "Bearer $token")
                 .contentType(MediaType.APPLICATION_JSON)
                 .content(objectMapper.writeValueAsString(request))
         ).andExpect(
-            org.springframework.test.web.servlet.result.MockMvcResultMatchers.status().isOk
+            status().isOk
         ).andReturn()
 
         val response = objectMapper.readValue(
@@ -211,7 +217,7 @@ class OrganizationControllerTest {
             com.chronosync.dto.common.ApiResponse::class.java
         )
 
-        org.junit.jupiter.api.Assertions.assertTrue(response.success)
+        assertTrue(response.success)
     }
 
     @Test
@@ -232,23 +238,23 @@ class OrganizationControllerTest {
         val savedOrgUser = organizationUserRepository.save(orgUser)
 
         mockMvc.perform(
-            org.springframework.test.web.servlet.request.MockMvcRequestBuilders.delete("/api/organization/users/${savedOrgUser.user.id}")
+            delete("/api/organization/users/${savedOrgUser.user.id}")
                 .header("Authorization", "Bearer $token")
         ).andExpect(
-            org.springframework.test.web.servlet.result.MockMvcResultMatchers.status().isOk
+            status().isOk
         )
 
         val deleted = organizationUserRepository.findByUserIdAndOrganizationId(savedMember.id, organizationId)
-        org.junit.jupiter.api.Assertions.assertNull(deleted)
+        assertNull(deleted)
     }
 
     @Test
     fun `cannot remove owner returns bad request`() {
         mockMvc.perform(
-            org.springframework.test.web.servlet.request.MockMvcRequestBuilders.delete("/api/organization/users/${testUser.id}")
+            delete("/api/organization/users/${testUser.id}")
                 .header("Authorization", "Bearer $token")
         ).andExpect(
-            org.springframework.test.web.servlet.result.MockMvcResultMatchers.status().isBadRequest
+            status().isBadRequest
         )
     }
 
@@ -282,12 +288,12 @@ class OrganizationControllerTest {
         )
 
         mockMvc.perform(
-            org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post("/api/organization/invite")
+            post("/api/organization/invite")
                 .header("Authorization", "Bearer $memberToken")
                 .contentType(MediaType.APPLICATION_JSON)
                 .content(objectMapper.writeValueAsString(request))
         ).andExpect(
-            org.springframework.test.web.servlet.result.MockMvcResultMatchers.status().isBadRequest
+            status().isBadRequest
         )
     }
 }

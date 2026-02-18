@@ -1,22 +1,30 @@
 package com.chronosync.controller
 
+import com.chronosync.config.TestSecurityConfig
+import com.chronosync.dto.profile.UpdateProfileRequest
 import com.chronosync.entity.*
 import com.chronosync.repository.*
 import com.chronosync.security.JwtUtil
 import com.fasterxml.jackson.databind.ObjectMapper
+import org.junit.jupiter.api.Assertions.*
 import org.junit.jupiter.api.BeforeEach
 import org.junit.jupiter.api.Test
 import org.springframework.beans.factory.annotation.Autowired
 import org.springframework.boot.test.autoconfigure.web.servlet.AutoConfigureMockMvc
 import org.springframework.boot.test.context.SpringBootTest
+import org.springframework.context.annotation.Import
+import org.springframework.http.MediaType
 import org.springframework.test.web.servlet.MockMvc
 import org.springframework.test.web.servlet.MvcResult
+import org.springframework.test.web.servlet.request.MockMvcRequestBuilders.*
+import org.springframework.test.web.servlet.result.MockMvcResultMatchers.status
 import java.time.Instant
 import java.time.temporal.ChronoUnit
-import java.util.UUID
+import java.util.*
 
 @SpringBootTest
 @AutoConfigureMockMvc
+@Import(TestSecurityConfig::class)
 class ProfileControllerTest {
 
     @Autowired
@@ -103,10 +111,10 @@ class ProfileControllerTest {
     @Test
     fun `get profile returns user profile with organizations`() {
         val result: MvcResult = mockMvc.perform(
-            org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get("/api/profile")
+            get("/api/profile")
                 .header("Authorization", "Bearer $token")
         ).andExpect(
-            org.springframework.test.web.servlet.result.MockMvcResultMatchers.status().isOk
+            status().isOk
         ).andReturn()
 
         val response = objectMapper.readValue(
@@ -114,25 +122,25 @@ class ProfileControllerTest {
             com.chronosync.dto.common.ApiResponse::class.java
         )
 
-        org.junit.jupiter.api.Assertions.assertTrue(response.success)
-        org.junit.jupiter.api.Assertions.assertNotNull(response.data)
+        assertTrue(response.success)
+        assertNotNull(response.data)
 
         val dataJson = objectMapper.writeValueAsString(response.data)
         val profileResponse = objectMapper.readValue(dataJson, com.chronosync.dto.profile.ProfileResponse::class.java)
 
-        org.junit.jupiter.api.Assertions.assertEquals("Profile User", profileResponse.name)
-        org.junit.jupiter.api.Assertions.assertEquals("profiletest@example.com", profileResponse.email)
-        org.junit.jupiter.api.Assertions.assertEquals("OWNER", profileResponse.role)
-        org.junit.jupiter.api.Assertions.assertEquals(2, profileResponse.organizations.size)
+        assertEquals("Profile User", profileResponse.name)
+        assertEquals("profiletest@example.com", profileResponse.email)
+        assertEquals("OWNER", profileResponse.role)
+        assertEquals(2, profileResponse.organizations.size)
     }
 
     @Test
     fun `profile shows correct organization roles`() {
         val result: MvcResult = mockMvc.perform(
-            org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get("/api/profile")
+            get("/api/profile")
                 .header("Authorization", "Bearer $token")
         ).andExpect(
-            org.springframework.test.web.servlet.result.MockMvcResultMatchers.status().isOk
+            status().isOk
         ).andReturn()
 
         val response = objectMapper.readValue(
@@ -140,7 +148,7 @@ class ProfileControllerTest {
             com.chronosync.dto.common.ApiResponse::class.java
         )
 
-        org.junit.jupiter.api.Assertions.assertTrue(response.success)
+        assertTrue(response.success)
 
         val dataJson = objectMapper.writeValueAsString(response.data)
         val profileResponse = objectMapper.readValue(dataJson, com.chronosync.dto.profile.ProfileResponse::class.java)
@@ -148,12 +156,12 @@ class ProfileControllerTest {
         val org1 = profileResponse.organizations.find { it.name == "Profile Test Org 1" }
         val org2 = profileResponse.organizations.find { it.name == "Profile Test Org 2" }
 
-        org.junit.jupiter.api.Assertions.assertNotNull(org1)
-        org.junit.jupiter.api.Assertions.assertNotNull(org2)
-        org.junit.jupiter.api.Assertions.assertEquals("OWNER", org1?.role)
-        org.junit.jupiter.api.Assertions.assertEquals("MEMBER", org2?.role)
-        org.junit.jupiter.api.Assertions.assertEquals("FREE", org1?.plan)
-        org.junit.jupiter.api.Assertions.assertEquals("PRO", org2?.plan)
+        assertNotNull(org1)
+        assertNotNull(org2)
+        assertEquals("OWNER", org1?.role)
+        assertEquals("MEMBER", org2?.role)
+        assertEquals("FREE", org1?.plan)
+        assertEquals("PRO", org2?.plan)
     }
 
     @Test
@@ -181,10 +189,10 @@ class ProfileControllerTest {
         )
 
         val result: MvcResult = mockMvc.perform(
-            org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get("/api/profile")
+            get("/api/profile")
                 .header("Authorization", "Bearer $tokenWithoutName")
         ).andExpect(
-            org.springframework.test.web.servlet.result.MockMvcResultMatchers.status().isOk
+            status().isOk
         ).andReturn()
 
         val response = objectMapper.readValue(
@@ -192,39 +200,39 @@ class ProfileControllerTest {
             com.chronosync.dto.common.ApiResponse::class.java
         )
 
-        org.junit.jupiter.api.Assertions.assertTrue(response.success)
+        assertTrue(response.success)
 
         val dataJson = objectMapper.writeValueAsString(response.data)
         val profileResponse = objectMapper.readValue(dataJson, com.chronosync.dto.profile.ProfileResponse::class.java)
 
-        org.junit.jupiter.api.Assertions.assertEquals("noname@example.com", profileResponse.name)
-        org.junit.jupiter.api.Assertions.assertEquals("MEMBER", profileResponse.role)
+        assertEquals("noname@example.com", profileResponse.name)
+        assertEquals("MEMBER", profileResponse.role)
     }
 
     @Test
     fun `unauthorized access to profile returns 403`() {
         mockMvc.perform(
-            org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get("/api/profile")
+            get("/api/profile")
         ).andExpect(
-            org.springframework.test.web.servlet.result.MockMvcResultMatchers.status().isForbidden
+            status().isForbidden
         )
     }
 
     @Test
     fun `update profile updates user information`() {
-        val request = mapOf(
-            "firstName" to "Updated",
-            "lastName" to "User",
-            "phoneNumber" to "+1234567890"
+        val request = UpdateProfileRequest(
+            firstName = "Updated",
+            lastName = "User",
+            phoneNumber = "+1234567890"
         )
 
         val result: MvcResult = mockMvc.perform(
-            org.springframework.test.web.servlet.request.MockMvcRequestBuilders.put("/api/profile")
+            put("/api/profile")
                 .header("Authorization", "Bearer $token")
-                .contentType(org.springframework.http.MediaType.APPLICATION_JSON)
+                .contentType(MediaType.APPLICATION_JSON)
                 .content(objectMapper.writeValueAsString(request))
         ).andExpect(
-            org.springframework.test.web.servlet.result.MockMvcResultMatchers.status().isOk
+            status().isOk
         ).andReturn()
 
         val response = objectMapper.readValue(
@@ -232,31 +240,31 @@ class ProfileControllerTest {
             com.chronosync.dto.common.ApiResponse::class.java
         )
 
-        org.junit.jupiter.api.Assertions.assertTrue(response.success)
+        assertTrue(response.success)
 
         val dataJson = objectMapper.writeValueAsString(response.data)
         val profileResponse = objectMapper.readValue(dataJson, com.chronosync.dto.profile.ProfileResponse::class.java)
 
-        org.junit.jupiter.api.Assertions.assertEquals("Updated User", profileResponse.name)
+        assertEquals("Updated User", profileResponse.name)
 
         val updatedUser = userRepository.findById(testUser.id).orElse(null)
-        org.junit.jupiter.api.Assertions.assertNotNull(updatedUser)
-        org.junit.jupiter.api.Assertions.assertEquals("Updated", updatedUser?.firstName)
-        org.junit.jupiter.api.Assertions.assertEquals("User", updatedUser?.lastName)
-        org.junit.jupiter.api.Assertions.assertEquals("+1234567890", updatedUser?.phoneNumber)
+        assertNotNull(updatedUser)
+        assertEquals("Updated", updatedUser?.firstName)
+        assertEquals("User", updatedUser?.lastName)
+        assertEquals("+1234567890", updatedUser?.phoneNumber)
     }
 
     @Test
     fun `update profile with partial data updates only provided fields`() {
-        val request = mapOf("firstName" to "NewFirstName")
+        val request = UpdateProfileRequest(firstName = "NewFirstName")
 
         val result: MvcResult = mockMvc.perform(
-            org.springframework.test.web.servlet.request.MockMvcRequestBuilders.put("/api/profile")
+            put("/api/profile")
                 .header("Authorization", "Bearer $token")
-                .contentType(org.springframework.http.MediaType.APPLICATION_JSON)
+                .contentType(MediaType.APPLICATION_JSON)
                 .content(objectMapper.writeValueAsString(request))
         ).andExpect(
-            org.springframework.test.web.servlet.result.MockMvcResultMatchers.status().isOk
+            status().isOk
         ).andReturn()
 
         val response = objectMapper.readValue(
@@ -264,12 +272,12 @@ class ProfileControllerTest {
             com.chronosync.dto.common.ApiResponse::class.java
         )
 
-        org.junit.jupiter.api.Assertions.assertTrue(response.success)
+        assertTrue(response.success)
 
         val updatedUser = userRepository.findById(testUser.id).orElse(null)
-        org.junit.jupiter.api.Assertions.assertNotNull(updatedUser)
-        org.junit.jupiter.api.Assertions.assertEquals("NewFirstName", updatedUser?.firstName)
-        org.junit.jupiter.api.Assertions.assertEquals("User", updatedUser?.lastName)
+        assertNotNull(updatedUser)
+        assertEquals("NewFirstName", updatedUser?.firstName)
+        assertEquals("User", updatedUser?.lastName)
     }
 
     @Test
@@ -299,10 +307,10 @@ class ProfileControllerTest {
         )
 
         val result: MvcResult = mockMvc.perform(
-            org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get("/api/profile")
+            get("/api/profile")
                 .header("Authorization", "Bearer $multiOrgToken")
         ).andExpect(
-            org.springframework.test.web.servlet.result.MockMvcResultMatchers.status().isOk
+            status().isOk
         ).andReturn()
 
         val response = objectMapper.readValue(
@@ -310,20 +318,20 @@ class ProfileControllerTest {
             com.chronosync.dto.common.ApiResponse::class.java
         )
 
-        org.junit.jupiter.api.Assertions.assertTrue(response.success)
+        assertTrue(response.success)
 
         val dataJson = objectMapper.writeValueAsString(response.data)
         val profileResponse = objectMapper.readValue(dataJson, com.chronosync.dto.profile.ProfileResponse::class.java)
 
-        org.junit.jupiter.api.Assertions.assertEquals("MEMBER", profileResponse.role)
-        org.junit.jupiter.api.Assertions.assertEquals(3, profileResponse.organizations.size)
+        assertEquals("MEMBER", profileResponse.role)
+        assertEquals(3, profileResponse.organizations.size)
 
         val org1Role = profileResponse.organizations.find { it.name == "Profile Test Org 1" }?.role
         val org2Role = profileResponse.organizations.find { it.name == "Profile Test Org 2" }?.role
         val org3Role = profileResponse.organizations.find { it.name == "Third Org" }?.role
 
-        org.junit.jupiter.api.Assertions.assertEquals("OWNER", org1Role)
-        org.junit.jupiter.api.Assertions.assertEquals("MEMBER", org2Role)
-        org.junit.jupiter.api.Assertions.assertEquals("OWNER", org3Role)
+        assertEquals("OWNER", org1Role)
+        assertEquals("MEMBER", org2Role)
+        assertEquals("OWNER", org3Role)
     }
 }

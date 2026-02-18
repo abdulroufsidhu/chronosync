@@ -1,23 +1,29 @@
 package com.chronosync.controller
 
+import com.chronosync.config.TestSecurityConfig
 import com.chronosync.entity.*
 import com.chronosync.repository.*
 import com.chronosync.security.JwtUtil
 import com.fasterxml.jackson.databind.ObjectMapper
+import org.junit.jupiter.api.Assertions.*
 import org.junit.jupiter.api.BeforeEach
 import org.junit.jupiter.api.Test
 import org.springframework.beans.factory.annotation.Autowired
 import org.springframework.boot.test.autoconfigure.web.servlet.AutoConfigureMockMvc
 import org.springframework.boot.test.context.SpringBootTest
+import org.springframework.context.annotation.Import
 import org.springframework.http.MediaType
 import org.springframework.test.web.servlet.MockMvc
 import org.springframework.test.web.servlet.MvcResult
+import org.springframework.test.web.servlet.request.MockMvcRequestBuilders.*
+import org.springframework.test.web.servlet.result.MockMvcResultMatchers.status
 import java.time.Instant
 import java.time.temporal.ChronoUnit
-import java.util.UUID
+import java.util.*
 
 @SpringBootTest
 @AutoConfigureMockMvc
+@Import(TestSecurityConfig::class)
 class UsageControllerTest {
 
     @Autowired
@@ -85,10 +91,10 @@ class UsageControllerTest {
     @Test
     fun `get usage returns current usage data`() {
         val result: MvcResult = mockMvc.perform(
-            org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get("/api/usage")
+            get("/api/usage")
                 .header("Authorization", "Bearer $token")
         ).andExpect(
-            org.springframework.test.web.servlet.result.MockMvcResultMatchers.status().isOk
+            status().isOk
         ).andReturn()
 
         val response = objectMapper.readValue(
@@ -96,17 +102,17 @@ class UsageControllerTest {
             com.chronosync.dto.common.ApiResponse::class.java
         )
 
-        org.junit.jupiter.api.Assertions.assertTrue(response.success)
-        org.junit.jupiter.api.Assertions.assertNotNull(response.data)
+        assertTrue(response.success)
+        assertNotNull(response.data)
 
         val dataJson = objectMapper.writeValueAsString(response.data)
         val usageResponse = objectMapper.readValue(dataJson, com.chronosync.dto.usage.UsageResponse::class.java)
 
-        org.junit.jupiter.api.Assertions.assertEquals("FREE", usageResponse.plan)
-        org.junit.jupiter.api.Assertions.assertEquals(45, usageResponse.used)
-        org.junit.jupiter.api.Assertions.assertEquals(100, usageResponse.limit)
-        org.junit.jupiter.api.Assertions.assertFalse(usageResponse.blocked)
-        org.junit.jupiter.api.Assertions.assertNotNull(usageResponse.nextReset)
+        assertEquals("FREE", usageResponse.plan)
+        assertEquals(45, usageResponse.used)
+        assertEquals(100, usageResponse.limit)
+        assertFalse(usageResponse.blocked)
+        assertNotNull(usageResponse.nextReset)
     }
 
     @Test
@@ -115,10 +121,10 @@ class UsageControllerTest {
         organizationRepository.save(testOrganization)
 
         val result: MvcResult = mockMvc.perform(
-            org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get("/api/usage")
+            get("/api/usage")
                 .header("Authorization", "Bearer $token")
         ).andExpect(
-            org.springframework.test.web.servlet.result.MockMvcResultMatchers.status().isOk
+            status().isOk
         ).andReturn()
 
         val response = objectMapper.readValue(
@@ -126,21 +132,21 @@ class UsageControllerTest {
             com.chronosync.dto.common.ApiResponse::class.java
         )
 
-        org.junit.jupiter.api.Assertions.assertTrue(response.success)
+        assertTrue(response.success)
 
         val dataJson = objectMapper.writeValueAsString(response.data)
         val usageResponse = objectMapper.readValue(dataJson, com.chronosync.dto.usage.UsageResponse::class.java)
 
-        org.junit.jupiter.api.Assertions.assertTrue(usageResponse.blocked)
+        assertTrue(usageResponse.blocked)
     }
 
     @Test
     fun `get billing plans returns available plans`() {
         val result: MvcResult = mockMvc.perform(
-            org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get("/api/billing/plans")
+            get("/api/billing/plans")
                 .header("Authorization", "Bearer $token")
         ).andExpect(
-            org.springframework.test.web.servlet.result.MockMvcResultMatchers.status().isOk
+            status().isOk
         ).andReturn()
 
         val response = objectMapper.readValue(
@@ -148,16 +154,16 @@ class UsageControllerTest {
             com.chronosync.dto.common.ApiResponse::class.java
         )
 
-        org.junit.jupiter.api.Assertions.assertTrue(response.success)
-        org.junit.jupiter.api.Assertions.assertNotNull(response.data)
+        assertTrue(response.success)
+        assertNotNull(response.data)
 
         val dataJson = objectMapper.writeValueAsString(response.data)
         val upgradeResponse = objectMapper.readValue(dataJson, com.chronosync.dto.usage.UpgradeResponse::class.java)
 
-        org.junit.jupiter.api.Assertions.assertEquals(3, upgradeResponse.plans.size)
-        org.junit.jupiter.api.Assertions.assertEquals("FREE", upgradeResponse.plans[0].name)
-        org.junit.jupiter.api.Assertions.assertEquals("PRO", upgradeResponse.plans[1].name)
-        org.junit.jupiter.api.Assertions.assertEquals("ENTERPRISE", upgradeResponse.plans[2].name)
+        assertEquals(3, upgradeResponse.plans.size)
+        assertEquals("FREE", upgradeResponse.plans[0].name)
+        assertEquals("PRO", upgradeResponse.plans[1].name)
+        assertEquals("ENTERPRISE", upgradeResponse.plans[2].name)
     }
 
     @Test
@@ -165,12 +171,12 @@ class UsageControllerTest {
         val request = mapOf("plan" to "PRO")
 
         val result: MvcResult = mockMvc.perform(
-            org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post("/api/billing/subscribe")
+            post("/api/billing/subscribe")
                 .header("Authorization", "Bearer $token")
                 .contentType(MediaType.APPLICATION_JSON)
                 .content(objectMapper.writeValueAsString(request))
         ).andExpect(
-            org.springframework.test.web.servlet.result.MockMvcResultMatchers.status().isOk
+            status().isOk
         ).andReturn()
 
         val response = objectMapper.readValue(
@@ -178,13 +184,13 @@ class UsageControllerTest {
             com.chronosync.dto.common.ApiResponse::class.java
         )
 
-        org.junit.jupiter.api.Assertions.assertTrue(response.success)
+        assertTrue(response.success)
 
         val dataJson = objectMapper.writeValueAsString(response.data)
         val usageResponse = objectMapper.readValue(dataJson, com.chronosync.dto.usage.UsageResponse::class.java)
 
-        org.junit.jupiter.api.Assertions.assertEquals("PRO", usageResponse.plan)
-        org.junit.jupiter.api.Assertions.assertEquals(500, usageResponse.limit)
+        assertEquals("PRO", usageResponse.plan)
+        assertEquals(500, usageResponse.limit)
     }
 
     @Test
@@ -214,21 +220,21 @@ class UsageControllerTest {
         val request = mapOf("plan" to "PRO")
 
         mockMvc.perform(
-            org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post("/api/billing/subscribe")
+            post("/api/billing/subscribe")
                 .header("Authorization", "Bearer $memberToken")
                 .contentType(MediaType.APPLICATION_JSON)
                 .content(objectMapper.writeValueAsString(request))
         ).andExpect(
-            org.springframework.test.web.servlet.result.MockMvcResultMatchers.status().isBadRequest
+            status().isBadRequest
         )
     }
 
     @Test
     fun `unauthorized access to usage returns 403`() {
         mockMvc.perform(
-            org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get("/api/usage")
+            get("/api/usage")
         ).andExpect(
-            org.springframework.test.web.servlet.result.MockMvcResultMatchers.status().isForbidden
+            status().isForbidden
         )
     }
 }
