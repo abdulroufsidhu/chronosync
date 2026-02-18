@@ -10,11 +10,14 @@ data class ScheduleDto(
     @Schema(description = "Title of the schedule", example = "Client Appointment")
     val title: String,
 
-    @Schema(description = "Start date and time in ISO format")
+    @Schema(description = "Start date and time in ISO format (UTC)")
     val startDateTime: Instant,
 
-    @Schema(description = "End date and time in ISO format")
+    @Schema(description = "End date and time in ISO format (UTC)")
     val endDateTime: Instant,
+
+    @Schema(description = "Organization timezone (IANA format)", example = "America/New_York")
+    val timezone: String,
 
     @Schema(description = "Organization details")
     val organization: OrganizationInfoDto? = null,
@@ -43,7 +46,10 @@ data class OrganizationInfoDto(
     val plan: String,
 
     @Schema(description = "User role in the organization", example = "OWNER")
-    val role: String
+    val role: String,
+
+    @Schema(description = "Organization timezone (IANA format)", example = "America/New_York")
+    val timezone: String
 )
 
 data class ClientDto(

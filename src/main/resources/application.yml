@@ -47,6 +47,10 @@ jwt:
 app:
   frontend-url: ${FRONTEND_URL:http://localhost:3000}
   email-from: ${EMAIL_FROM:noreply@chronosync.com}
+  timezone:
+    ip-api:
+      enabled: true
+      url: https://ipapi.co
 
 logging:
   level:

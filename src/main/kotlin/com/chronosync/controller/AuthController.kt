@@ -8,6 +8,7 @@ import io.swagger.v3.oas.annotations.media.Content
 import io.swagger.v3.oas.annotations.media.Schema
 import io.swagger.v3.oas.annotations.responses.ApiResponses
 import io.swagger.v3.oas.annotations.tags.Tag
+import jakarta.servlet.http.HttpServletRequest
 import org.springframework.http.HttpStatus
 import org.springframework.http.ResponseEntity
 import org.springframework.web.bind.annotation.*
@@ -48,15 +49,33 @@ class AuthController(
     @PostMapping("/register")
     @Operation(
         summary = "Register new organization",
-        description = "Create a new organization with an admin user. The role field must be one of: OWNER, MANAGER, MEMBER"
+        description = "Create a new organization with an admin user. The role field must be one of: OWNER, MANAGER, MEMBER. Timezone is auto-detected from IP if not provided."
     )
-    fun register(@RequestBody request: RegisterRequest): ResponseEntity<ApiResponse<AuthResponse>> {
+    fun register(
+        @RequestBody request: RegisterRequest,
+        httpRequest: HttpServletRequest
+    ): ResponseEntity<ApiResponse<AuthResponse>> {
         return try {
-            val response = authService.register(request)
+            val clientIp = extractClientIp(httpRequest)
+            val response = authService.register(request, clientIp)
             ResponseEntity.ok(ApiResponse(success = true, data = response))
         } catch (e: IllegalArgumentException) {
             ResponseEntity.badRequest().body(ApiResponse(success = false, message = e.message))
         }
+    }
+
+    private fun extractClientIp(request: HttpServletRequest): String? {
+        val headers = listOf("X-Forwarded-For", "Proxy-Client-IP", "WL-Proxy-Client-IP", "HTTP_X_FORWARDED_FOR")
+        
+        for (header in headers) {
+            val ip = request.getHeader(header)
+            if (!ip.isNullOrBlank() && !ip.equals("unknown", ignoreCase = true)) {
+                // X-Forwarded-For can contain multiple IPs, take the first one
+                return ip.split(",")[0].trim()
+            }
+        }
+        
+        return request.remoteAddr
     }
 
     @PostMapping("/forgot-password")

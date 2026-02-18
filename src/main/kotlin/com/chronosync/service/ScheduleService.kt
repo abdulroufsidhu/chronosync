@@ -1,6 +1,7 @@
 package com.chronosync.service
 
 import com.chronosync.dto.schedule.*
+import com.chronosync.entity.NotificationType
 import com.chronosync.entity.OrganizationRole
 import com.chronosync.entity.Plan
 import com.chronosync.entity.Schedule
@@ -19,7 +20,8 @@ import java.util.UUID
 class ScheduleService(
     private val scheduleRepository: ScheduleRepository,
     private val userRepository: UserRepository,
-    private val organizationRepository: OrganizationRepository
+    private val organizationRepository: OrganizationRepository,
+    private val notificationService: NotificationService
 ) {
 
     @Transactional(readOnly = true)
@@ -119,6 +121,9 @@ class ScheduleService(
         val updatedOrg = organization.copy(currentUsage = organization.currentUsage + 1)
         organizationRepository.save(updatedOrg)
 
+        // Send notifications asynchronously
+        notificationService.sendScheduleNotifications(savedSchedule, organization, NotificationType.SCHEDULE_CREATED)
+
         return savedSchedule.toScheduleDto()
     }
 
@@ -150,7 +155,12 @@ class ScheduleService(
             updatedAt = Instant.now()
         )
 
-        return scheduleRepository.save(updatedSchedule).toScheduleDto()
+        val savedSchedule = scheduleRepository.save(updatedSchedule)
+
+        // Send notifications asynchronously
+        notificationService.sendScheduleNotifications(savedSchedule, schedule.organization, NotificationType.SCHEDULE_UPDATED)
+
+        return savedSchedule.toScheduleDto()
     }
 
     @Transactional
@@ -167,6 +177,10 @@ class ScheduleService(
         }
 
         val organization = schedule.organization
+
+        // Send cancellation notifications BEFORE deleting
+        notificationService.sendScheduleNotifications(schedule, organization, NotificationType.SCHEDULE_CANCELLED)
+
         val updatedOrg = organization.copy(currentUsage = (organization.currentUsage - 1).coerceAtLeast(0))
         organizationRepository.save(updatedOrg)
 
@@ -183,11 +197,13 @@ class ScheduleService(
             title = this.title,
             startDateTime = this.startDateTime,
             endDateTime = this.endDateTime,
+            timezone = this.organization.timezone,
             organization = OrganizationInfoDto(
                 id = this.organization.id.toString(),
                 name = this.organization.name,
                 plan = this.organization.plan.name,
-                role = ""
+                role = "",
+                timezone = this.organization.timezone
             ),
             client = if (this.clientName != null) ClientDto(
                 name = this.clientName!!,

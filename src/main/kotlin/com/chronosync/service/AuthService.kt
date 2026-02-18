@@ -23,7 +23,8 @@ class AuthService(
     private val authTokenRepository: AuthTokenRepository,
     private val passwordEncoder: PasswordEncoder,
     private val jwtUtil: JwtUtil,
-    private val emailService: EmailService
+    private val emailService: EmailService,
+    private val timezoneService: TimezoneService
 ) {
 
     companion object {
@@ -62,13 +63,14 @@ class AuthService(
                 id = orgUser.organization.id.toString(),
                 name = orgUser.organization.name,
                 plan = orgUser.organization.plan.name,
-                role = orgUser.role.name
+                role = orgUser.role.name,
+                timezone = orgUser.organization.timezone
             )
         )
     }
 
     @Transactional
-    fun register(request: RegisterRequest): AuthResponse {
+    fun register(request: RegisterRequest, clientIp: String? = null): AuthResponse {
         if (userRepository.existsByEmail(request.email)) {
             throw IllegalArgumentException("Email already registered")
         }
@@ -82,6 +84,10 @@ class AuthService(
         )
         val savedUser = userRepository.save(user)
 
+        // Determine timezone: use provided, detect from IP, or default to UTC
+        val timezone = request.organization.timezone
+            ?: timezoneService.detectTimezoneFromIp(clientIp)
+
         val organization = Organization(
             name = request.organization.name,
             type = request.organization.type,
@@ -89,6 +95,7 @@ class AuthService(
             plan = com.chronosync.entity.Plan.FREE,
             scheduleLimit = 100,
             currentUsage = 0,
+            timezone = timezone,
             nextReset = Instant.now().plus(30, ChronoUnit.DAYS)
         )
         val savedOrg = organizationRepository.save(organization)
@@ -125,7 +132,8 @@ class AuthService(
                 id = savedOrg.id.toString(),
                 name = savedOrg.name,
                 plan = savedOrg.plan.name,
-                role = ownerRole.name
+                role = ownerRole.name,
+                timezone = savedOrg.timezone
             )
         )
     }
@@ -259,7 +267,8 @@ class AuthService(
                 id = orgUser.organization.id.toString(),
                 name = orgUser.organization.name,
                 plan = orgUser.organization.plan.name,
-                role = orgUser.role.name
+                role = orgUser.role.name,
+                timezone = orgUser.organization.timezone
             )
         )
     }

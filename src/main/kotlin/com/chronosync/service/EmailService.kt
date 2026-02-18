@@ -1,16 +1,26 @@
 package com.chronosync.service
 
+import com.chronosync.entity.NotificationType
+import com.chronosync.entity.Organization
+import com.chronosync.entity.RecipientType
+import com.chronosync.entity.Schedule
 import org.slf4j.LoggerFactory
 import org.springframework.beans.factory.annotation.Value
-import org.springframework.mail.SimpleMailMessage
+import org.springframework.core.io.ByteArrayResource
 import org.springframework.mail.javamail.JavaMailSender
 import org.springframework.mail.javamail.MimeMessageHelper
 import org.springframework.scheduling.annotation.Async
 import org.springframework.stereotype.Service
+import java.time.Instant
+import java.time.ZoneId
+import java.time.format.DateTimeFormatter
+import jakarta.mail.internet.MimeMessage
 
 @Service
 class EmailService(
     private val mailSender: JavaMailSender,
+    private val calendarService: CalendarService,
+    private val timezoneService: TimezoneService,
     @Value("\${app.frontend-url:http://localhost:3000}") private val frontendUrl: String,
     @Value("\${app.email-from:noreply@chronosync.com}") private val emailFrom: String
 ) {
@@ -58,6 +68,250 @@ class EmailService(
         }
     }
 
+    @Async
+    fun sendScheduleNotification(
+        schedule: Schedule,
+        organization: Organization,
+        recipientType: RecipientType,
+        notificationType: NotificationType
+    ) {
+        try {
+            val (recipientEmail, recipientName) = when (recipientType) {
+                RecipientType.STAFF -> schedule.assignedUser?.email to schedule.assignedUser?.getFullNameOrEmail()
+                RecipientType.CLIENT -> schedule.clientEmail to schedule.clientName
+            }
+
+            if (recipientEmail.isNullOrBlank()) {
+                logger.info("No email for recipient type $recipientType, skipping notification")
+                return
+            }
+
+            // Generate calendar event
+            val icsContent = calendarService.generateEvent(
+                schedule,
+                organization,
+                method = if (notificationType == NotificationType.SCHEDULE_CANCELLED) CalendarMethod.CANCEL else CalendarMethod.REQUEST
+            )
+
+            // Build email content
+            val (subject, htmlContent) = buildScheduleEmail(
+                schedule,
+                organization,
+                recipientType,
+                notificationType,
+                recipientName
+            )
+
+            // Send email with calendar attachment
+            sendHtmlEmailWithAttachment(
+                to = recipientEmail,
+                subject = subject,
+                htmlContent = htmlContent,
+                attachmentName = "appointment.ics",
+                attachmentContent = icsContent.toByteArray(),
+                attachmentType = "text/calendar"
+            )
+
+            logger.info("Schedule notification sent to: $recipientEmail (type: $notificationType)")
+        } catch (e: Exception) {
+            logger.error("Failed to send schedule notification for schedule ${schedule.id}", e)
+            throw e // Re-throw so NotificationService can log the failure
+        }
+    }
+
+    private fun buildScheduleEmail(
+        schedule: Schedule,
+        organization: Organization,
+        recipientType: RecipientType,
+        notificationType: NotificationType,
+        recipientName: String?
+    ): Pair<String, String> {
+        val zoneId = ZoneId.of(organization.timezone)
+        val startZoned = schedule.startDateTime.atZone(zoneId)
+        val endZoned = schedule.endDateTime.atZone(zoneId)
+
+        val dateFormatter = DateTimeFormatter.ofPattern("EEEE, MMMM d, yyyy")
+        val timeFormatter = DateTimeFormatter.ofPattern("h:mm a")
+
+        val subject = when (notificationType) {
+            NotificationType.SCHEDULE_CREATED -> "Appointment Confirmed - ${schedule.title}"
+            NotificationType.SCHEDULE_UPDATED -> "Appointment Updated - ${schedule.title}"
+            NotificationType.SCHEDULE_CANCELLED -> "Appointment Cancelled - ${schedule.title}"
+        }
+
+        val htmlContent = if (recipientType == RecipientType.STAFF) {
+            buildStaffScheduleEmail(
+                schedule,
+                organization,
+                notificationType,
+                recipientName,
+                startZoned.format(dateFormatter),
+                startZoned.format(timeFormatter),
+                endZoned.format(timeFormatter),
+                organization.timezone
+            )
+        } else {
+            buildClientScheduleEmail(
+                schedule,
+                organization,
+                notificationType,
+                recipientName,
+                startZoned.format(dateFormatter),
+                startZoned.format(timeFormatter),
+                endZoned.format(timeFormatter),
+                organization.timezone
+            )
+        }
+
+        return subject to htmlContent
+    }
+
+    private fun buildStaffScheduleEmail(
+        schedule: Schedule,
+        organization: Organization,
+        notificationType: NotificationType,
+        staffName: String?,
+        date: String,
+        startTime: String,
+        endTime: String,
+        timezone: String
+    ): String {
+        val title = when (notificationType) {
+            NotificationType.SCHEDULE_CREATED -> "New Appointment Scheduled"
+            NotificationType.SCHEDULE_UPDATED -> "Appointment Updated"
+            NotificationType.SCHEDULE_CANCELLED -> "Appointment Cancelled"
+        }
+
+        return """
+            <!DOCTYPE html>
+            <html>
+            <head>
+                <meta charset="UTF-8">
+                <title>$title</title>
+            </head>
+            <body style="font-family: Arial, sans-serif; line-height: 1.6; color: #333;">
+                <div style="max-width: 600px; margin: 0 auto; padding: 20px;">
+                    <h2 style="color: #2c3e50;">$title</h2>
+                    <p>Hi ${staffName ?: "there"},</p>
+                    
+                    ${when (notificationType) {
+                        NotificationType.SCHEDULE_CREATED -> "<p>A new appointment has been scheduled for you.</p>"
+                        NotificationType.SCHEDULE_UPDATED -> "<p>An appointment has been updated.</p>"
+                        NotificationType.SCHEDULE_CANCELLED -> "<p>An appointment has been cancelled.</p>"
+                    }}
+                    
+                    <div style="background: #f5f5f5; padding: 20px; margin: 20px 0; border-radius: 5px;">
+                        <h3 style="margin-top: 0; color: #2c3e50;">${schedule.title}</h3>
+                        <p><strong>Date:</strong> $date</p>
+                        <p><strong>Time:</strong> $startTime - $endTime ($timezone)</p>
+                        
+                        ${schedule.clientName?.let { "<p><strong>Client:</strong> $it</p>" } ?: ""}
+                        ${schedule.clientPhone?.let { "<p><strong>Phone:</strong> $it</p>" } ?: ""}
+                        ${schedule.clientEmail?.let { "<p><strong>Email:</strong> $it</p>" } ?: ""}
+                        ${schedule.clientAddress?.let { "<p><strong>Location:</strong> $it</p>" } ?: ""}
+                        ${schedule.notes?.let { "<p><strong>Notes:</strong> $it</p>" } ?: ""}
+                    </div>
+                    
+                    <p>We've attached a calendar file (.ics) that you can add to your calendar.</p>
+                    
+                    <div style="text-align: center; margin: 30px 0;">
+                        <a href="$frontendUrl/schedules/${schedule.id}" 
+                           style="background-color: #3498db; color: white; padding: 12px 30px; text-decoration: none; border-radius: 5px; display: inline-block;">
+                            View in ChronoSync
+                        </a>
+                    </div>
+                    
+                    <hr style="border: none; border-top: 1px solid #eee; margin: 20px 0;">
+                    <p style="color: #999; font-size: 12px;">ChronoSync - ${organization.name}</p>
+                </div>
+            </body>
+            </html>
+        """.trimIndent()
+    }
+
+    private fun buildClientScheduleEmail(
+        schedule: Schedule,
+        organization: Organization,
+        notificationType: NotificationType,
+        clientName: String?,
+        date: String,
+        startTime: String,
+        endTime: String,
+        timezone: String
+    ): String {
+        val title = when (notificationType) {
+            NotificationType.SCHEDULE_CREATED -> "Your Appointment is Confirmed"
+            NotificationType.SCHEDULE_UPDATED -> "Your Appointment has been Updated"
+            NotificationType.SCHEDULE_CANCELLED -> "Your Appointment has been Cancelled"
+        }
+
+        val greeting = clientName?.let { "Hi $it," } ?: "Hello,"
+
+        val googleLink = calendarService.generateGoogleCalendarLink(schedule, organization)
+        val outlookLink = calendarService.generateOutlookCalendarLink(schedule, organization)
+        val yahooLink = calendarService.generateYahooCalendarLink(schedule, organization)
+
+        return """
+            <!DOCTYPE html>
+            <html>
+            <head>
+                <meta charset="UTF-8">
+                <title>$title</title>
+            </head>
+            <body style="font-family: Arial, sans-serif; line-height: 1.6; color: #333;">
+                <div style="max-width: 600px; margin: 0 auto; padding: 20px;">
+                    <h2 style="color: #2c3e50;">${organization.name}</h2>
+                    <h3>$title</h3>
+                    <p>$greeting</p>
+                    
+                    ${when (notificationType) {
+                        NotificationType.SCHEDULE_CREATED -> "<p>Your appointment has been scheduled with us. Here are the details:</p>"
+                        NotificationType.SCHEDULE_UPDATED -> "<p>Your appointment details have been updated. Here are the new details:</p>"
+                        NotificationType.SCHEDULE_CANCELLED -> "<p>Your appointment has been cancelled. Here were the details:</p>"
+                    }}
+                    
+                    <div style="background: #f5f5f5; padding: 20px; margin: 20px 0; border-radius: 5px;">
+                        <h3 style="margin-top: 0; color: #2c3e50;">${schedule.title}</h3>
+                        <p><strong>Date:</strong> $date</p>
+                        <p><strong>Time:</strong> $startTime - $endTime ($timezone)</p>
+                        ${schedule.clientAddress?.let { "<p><strong>Location:</strong> $it</p>" } ?: ""}
+                        ${schedule.notes?.let { "<p><strong>Notes:</strong> $it</p>" } ?: ""}
+                    </div>
+                    
+                    ${if (notificationType != NotificationType.SCHEDULE_CANCELLED) """
+                    <div style="margin: 20px 0;">
+                        <p><strong>Add to your calendar:</strong></p>
+                        <div style="text-align: center; margin: 15px 0;">
+                            <a href="$googleLink" 
+                               style="display: inline-block; margin: 5px; padding: 10px 20px; background: #4285f4; color: white; text-decoration: none; border-radius: 5px;">
+                                Google Calendar
+                            </a>
+                            <a href="$outlookLink" 
+                               style="display: inline-block; margin: 5px; padding: 10px 20px; background: #0078d4; color: white; text-decoration: none; border-radius: 5px;">
+                                Outlook
+                            </a>
+                            <a href="$yahooLink" 
+                               style="display: inline-block; margin: 5px; padding: 10px 20px; background: #6001d2; color: white; text-decoration: none; border-radius: 5px;">
+                                Yahoo
+                            </a>
+                        </div>
+                        <p style="font-size: 14px; color: #666;">
+                            You can also open the attached .ics file to add this to any calendar app.
+                        </p>
+                    </div>
+                    """ else ""}
+                    
+                    <hr style="border: none; border-top: 1px solid #eee; margin: 20px 0;">
+                    <p style="color: #999; font-size: 12px;">
+                        This email was sent by ChronoSync on behalf of ${organization.name}.<br>
+                        If you have any questions, please contact us at ${organization.name}.
+                    </p>
+                </div>
+            </body>
+            </html>
+        """.trimIndent()
+    }
+
     private fun sendHtmlEmail(to: String, subject: String, htmlContent: String) {
         val message = mailSender.createMimeMessage()
         val helper = MimeMessageHelper(message, true, "UTF-8")
@@ -66,6 +320,26 @@ class EmailService(
         helper.setTo(to)
         helper.setSubject(subject)
         helper.setText(htmlContent, true)
+
+        mailSender.send(message)
+    }
+
+    private fun sendHtmlEmailWithAttachment(
+        to: String,
+        subject: String,
+        htmlContent: String,
+        attachmentName: String,
+        attachmentContent: ByteArray,
+        attachmentType: String
+    ) {
+        val message = mailSender.createMimeMessage()
+        val helper = MimeMessageHelper(message, true, "UTF-8")
+
+        helper.setFrom(emailFrom)
+        helper.setTo(to)
+        helper.setSubject(subject)
+        helper.setText(htmlContent, true)
+        helper.addAttachment(attachmentName, ByteArrayResource(attachmentContent), attachmentType)
 
         mailSender.send(message)
     }

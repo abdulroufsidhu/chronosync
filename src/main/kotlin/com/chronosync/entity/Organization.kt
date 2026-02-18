@@ -34,6 +34,9 @@ data class Organization(
     @Column(name = "next_reset")
     val nextReset: Instant? = null,
 
+    @Column(nullable = false)
+    val timezone: String = "UTC",
+
     @Column(name = "created_at", nullable = false, updatable = false)
     val createdAt: Instant = Instant.now(),
 

@@ -35,7 +35,14 @@ data class OrganizationInfoRegisterDto(
         description = "Role of the user in the organization. Must be one of: OWNER, MANAGER, MEMBER",
         example = "OWNER"
     )
-    val role: String
+    val role: String,
+
+    @Schema(
+        description = "Timezone for the organization (IANA format). Auto-detected from IP if not provided.",
+        example = "America/New_York",
+        required = false
+    )
+    val timezone: String? = null
 )
 
 data class AuthResponse(
@@ -71,7 +78,10 @@ data class OrganizationDto(
     val plan: String,
 
     @Schema(description = "User's role in the organization", example = "OWNER")
-    val role: String
+    val role: String,
+
+    @Schema(description = "Organization timezone (IANA format)", example = "America/New_York")
+    val timezone: String
 )
 
 data class ForgotPasswordRequest(

@@ -38,7 +38,17 @@ data class User(
 
     @Column(name = "updated_at")
     val updatedAt: Instant? = null
-)
+) {
+    fun getFullNameOrEmail(): String {
+        return if (firstName != null && lastName != null) {
+            "$firstName $lastName"
+        } else if (firstName != null) {
+            firstName
+        } else {
+            email
+        }
+    }
+}
 
 enum class UserStatus {
     ACTIVE,
