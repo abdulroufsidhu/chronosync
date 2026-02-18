@@ -1,6 +1,6 @@
 # ChronoSync Backend
 
-A Spring Boot backend for the ChronoSync scheduling SaaS application.
+A Spring Boot backend for the ChronoSync scheduling SaaS application. [documentation](./docs/README.md)
 
 ## Tech Stack
 
