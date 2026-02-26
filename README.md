@@ -22,12 +22,12 @@ A Spring Boot backend for the ChronoSync scheduling SaaS application. [documenta
 
 1. Start PostgreSQL:
 ```bash
-docker-compose up -d db
+docker compose up -d db
 ```
 
 2. Run migrations:
 ```bash
-docker-compose up flyway
+docker compose up flyway
 ```
 
 3. Run the application:
@@ -39,7 +39,7 @@ cd backend
 ### Production
 
 ```bash
-docker-compose up -d
+docker compose up -d
 ```
 
 ## API Endpoints

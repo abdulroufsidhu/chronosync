@@ -11,13 +11,18 @@ data class LoginRequest(
 )
 
 data class RegisterRequest(
+    val firstName: String,
+    val lastName: String,
+    @Schema(description = "Phone number for the admin user account", example = "+1234567890")
+    val phoneNumber: String? = null,
+
     @Schema(description = "Email for the admin user account", example = "admin@example.com")
     val email: String,
 
     @Schema(description = "Password for the admin user account", example = "SecureP@ss123")
     val password: String,
 
-    @Schema(description = "Organization details")
+    @Schema(description = "Organization details", example = "")
     val organization: OrganizationInfoRegisterDto
 )
 
@@ -25,7 +30,10 @@ data class OrganizationInfoRegisterDto(
     @Schema(description = "Name of the organization", example = "My Salon")
     val name: String,
 
-    @Schema(description = "List of services offered", example = "[\"cutting\", \"beard\", \"facial\"]")
+    @Schema(
+        description = "List of services offered",
+        example = "[\"cutting\", \"beard\", \"facial\"]"
+    )
     val services: List<String>,
 
     @Schema(description = "Type of organization", example = "salon")
@@ -62,6 +70,13 @@ data class UserDto(
 
     @Schema(description = "User email")
     val email: String,
+
+    val firstName: String?,
+
+    val lastName: String?,
+
+    @Schema(description = "User phone number", example = "+1234567890")
+    val phoneNumber: String? = null,
 
     @Schema(description = "User role in the organization", example = "OWNER")
     val role: String

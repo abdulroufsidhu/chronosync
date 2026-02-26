@@ -57,7 +57,10 @@ class AuthService(
             user = UserDto(
                 id = user.id.toString(),
                 email = user.email,
-                role = orgUser.role.name
+                role = orgUser.role.name,
+                firstName = user.firstName,
+                lastName = user.lastName,
+                phoneNumber = user.phoneNumber,
             ),
             organization = OrganizationDto(
                 id = orgUser.organization.id.toString(),
@@ -80,7 +83,10 @@ class AuthService(
         val user = User(
             email = request.email,
             password = password,
-            status = UserStatus.ACTIVE
+            status = UserStatus.ACTIVE,
+            firstName = request.firstName,
+            lastName = request.lastName,
+            phoneNumber = request.phoneNumber,
         )
         val savedUser = userRepository.save(user)
 
@@ -126,7 +132,10 @@ class AuthService(
             user = UserDto(
                 id = savedUser.id.toString(),
                 email = savedUser.email,
-                role = ownerRole.name
+                role = ownerRole.name,
+                firstName = savedUser.firstName,
+                lastName = savedUser.lastName,
+                phoneNumber = savedUser.phoneNumber,
             ),
             organization = OrganizationDto(
                 id = savedOrg.id.toString(),
@@ -261,7 +270,10 @@ class AuthService(
             user = UserDto(
                 id = user.id.toString(),
                 email = user.email,
-                role = orgUser.role.name
+                role = orgUser.role.name,
+                firstName = user.firstName,
+                lastName = user.lastName,
+                phoneNumber = user.phoneNumber,
             ),
             organization = OrganizationDto(
                 id = orgUser.organization.id.toString(),

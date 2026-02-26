@@ -12,10 +12,10 @@ data class User(
     val id: UUID = UUID.randomUUID(),
 
     @Column(nullable = false, unique = true)
-    val email: String,
+    val email: String = "",
 
     @Column(nullable = false)
-    val password: String,
+    val password: String = "",
 
     @Column(name = "first_name")
     val firstName: String? = null,

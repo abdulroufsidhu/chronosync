@@ -39,7 +39,19 @@ data class NotificationLog(
     @CreationTimestamp
     @Column(name = "created_at", nullable = false, updatable = false)
     val createdAt: Instant = Instant.now()
-)
+) {
+    protected constructor() : this(
+        id = UUID.randomUUID(),
+        scheduleId = UUID.randomUUID(),
+        recipientType = RecipientType.STAFF,
+        recipientEmail = "",
+        notificationType = NotificationType.SCHEDULE_CREATED,
+        sentAt = Instant.now(),
+        status = NotificationStatus.SENT,
+        errorMessage = null,
+        createdAt = Instant.now()
+    );
+}
 
 enum class RecipientType {
     STAFF, CLIENT
