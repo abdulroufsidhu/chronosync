@@ -124,6 +124,8 @@ class AuthControllerTest {
     @Test
     fun `register creates new organization and user`() {
         val request = RegisterRequest(
+            firstName = "John",
+            lastName = "Doe",
             email = "newuser@example.com",
             password = "password123",
             organization = OrganizationInfoRegisterDto(
@@ -167,6 +169,8 @@ class AuthControllerTest {
         userRepository.save(existingUser)
 
         val request = RegisterRequest(
+            firstName = "John",
+            lastName = "Doe",
             email = "existing@example.com",
             password = "password123",
             organization = OrganizationInfoRegisterDto(
@@ -501,6 +505,8 @@ class AuthControllerTest {
     @Test
     fun `register with timezone creates organization with timezone`() {
         val request = RegisterRequest(
+            firstName = "John",
+            lastName = "Doe",
             email = "timezoneuser@example.com",
             password = "password123",
             organization = OrganizationInfoRegisterDto(
@@ -539,6 +545,8 @@ class AuthControllerTest {
     @Test
     fun `register without timezone defaults to UTC`() {
         val request = RegisterRequest(
+            firstName = "John",
+            lastName = "Doe",
             email = "utcuser@example.com",
             password = "password123",
             organization = OrganizationInfoRegisterDto(

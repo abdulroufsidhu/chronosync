@@ -44,8 +44,8 @@ data class Organization(
     val updatedAt: Instant? = null
 )
 
-enum class Plan(val displayName: String, val price: String, val limit: Int) {
-    FREE("Free", "$0/month", 100),
-    PRO("Pro", "$5/month", 500),
-    ENTERPRISE("Enterprise", "$20/month", -1)
+enum class Plan(val displayName: String, val price: String, val priceValue: Int, val limit: Int) {
+    FREE("Free", "$0/month", 0, 100),
+    PRO("Pro", "$5/month", 5, 500),
+    ENTERPRISE("Enterprise", "$20/month", 20, -1)
 }

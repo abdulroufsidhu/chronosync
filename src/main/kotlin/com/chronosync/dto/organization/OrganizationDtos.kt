@@ -7,6 +7,9 @@ data class UserListDto(
     @Schema(description = "User UUID")
     val id: String,
 
+    @Schema(description = "User full name")
+    val name: String,
+
     @Schema(description = "User email")
     val email: String,
 
@@ -65,4 +68,15 @@ data class UserDropdownDto(
 
     @Schema(description = "User name or email")
     val name: String
+)
+
+data class MemberStatsDto(
+    @Schema(description = "Total number of schedules")
+    val totalSchedules: Int,
+
+    @Schema(description = "Number of schedules this month")
+    val thisMonth: Int,
+
+    @Schema(description = "Completion rate percentage")
+    val completionRate: Int
 )

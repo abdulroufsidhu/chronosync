@@ -34,6 +34,7 @@ class ProfileService(
             .ifEmpty { principal.email }
 
         return ProfileResponse(
+            id = principal.id.toString(),
             name = name,
             email = principal.email,
             role = principal.role,

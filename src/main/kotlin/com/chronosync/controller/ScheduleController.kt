@@ -32,10 +32,11 @@ class ScheduleController(
     fun getSchedules(
         @CurrentUser principal: UserPrincipal,
         @RequestParam @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) from: LocalDate,
-        @RequestParam @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) to: LocalDate
+        @RequestParam @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) to: LocalDate,
+        @RequestParam(required = false) assignedUserId: UUID?
     ): ResponseEntity<ApiResponse<ScheduleListResponse>> {
         return try {
-            val response = scheduleService.getSchedules(principal, from, to)
+            val response = scheduleService.getSchedules(principal, from, to, assignedUserId)
             ResponseEntity.ok(ApiResponse(success = true, data = response))
         } catch (e: IllegalArgumentException) {
             ResponseEntity.badRequest().body(ApiResponse(success = false, message = e.message))

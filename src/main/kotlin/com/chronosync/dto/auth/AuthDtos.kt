@@ -68,6 +68,9 @@ data class UserDto(
     @Schema(description = "User UUID")
     val id: String,
 
+    @Schema(description = "User full name")
+    val name: String,
+
     @Schema(description = "User email")
     val email: String,
 
@@ -120,4 +123,23 @@ data class MagicLinkRequest(
 data class TokenResponse(
     @Schema(description = "Success message")
     val message: String
+)
+
+data class SwitchOrganizationRequest(
+    @Schema(description = "Organization UUID to switch to", example = "uuid-string")
+    val organizationId: String
+)
+
+data class AcceptInvitationRequest(
+    @Schema(description = "Invitation token from email", example = "invitation_token")
+    val token: String,
+
+    @Schema(description = "User's first name", example = "John")
+    val firstName: String,
+
+    @Schema(description = "User's last name", example = "Doe")
+    val lastName: String,
+
+    @Schema(description = "Password to set for the account", example = "SecureP@ss123")
+    val password: String
 )

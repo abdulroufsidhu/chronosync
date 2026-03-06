@@ -26,6 +26,32 @@ class OrganizationController(
         }
     }
 
+    @GetMapping("/users/{id}")
+    fun getUser(
+        @CurrentUser principal: UserPrincipal,
+        @PathVariable id: UUID
+    ): ResponseEntity<ApiResponse<UserListDto>> {
+        return try {
+            val response = organizationService.getUserById(principal, id)
+            ResponseEntity.ok(ApiResponse(success = true, data = response))
+        } catch (e: IllegalArgumentException) {
+            ResponseEntity.badRequest().body(ApiResponse(success = false, message = e.message))
+        }
+    }
+
+    @GetMapping("/users/{id}/stats")
+    fun getUserStats(
+        @CurrentUser principal: UserPrincipal,
+        @PathVariable id: UUID
+    ): ResponseEntity<ApiResponse<MemberStatsDto>> {
+        return try {
+            val response = organizationService.getUserStats(principal, id)
+            ResponseEntity.ok(ApiResponse(success = true, data = response))
+        } catch (e: IllegalArgumentException) {
+            ResponseEntity.badRequest().body(ApiResponse(success = false, message = e.message))
+        }
+    }
+
     @GetMapping("/users/dropdown")
     fun getUserDropdowns(@CurrentUser principal: UserPrincipal): ResponseEntity<ApiResponse<List<UserDropdownDto>>> {
         return try {

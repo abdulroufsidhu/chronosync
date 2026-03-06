@@ -14,6 +14,9 @@ data class UpdateProfileRequest(
 )
 
 data class ProfileResponse(
+    @Schema(description = "User UUID")
+    val id: String,
+
     @Schema(description = "User's full name")
     val name: String,
 

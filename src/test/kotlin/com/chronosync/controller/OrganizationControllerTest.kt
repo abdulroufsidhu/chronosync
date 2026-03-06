@@ -46,6 +46,12 @@ class OrganizationControllerTest {
     @Autowired
     private lateinit var organizationUserRepository: OrganizationUserRepository
 
+    @Autowired
+    private lateinit var authTokenRepository: AuthTokenRepository
+
+    @Autowired
+    private lateinit var scheduleRepository: ScheduleRepository
+
     private lateinit var testUser: User
     private lateinit var testOrganization: Organization
     private lateinit var token: String
@@ -53,6 +59,8 @@ class OrganizationControllerTest {
 
     @BeforeEach
     fun setUp() {
+        scheduleRepository.deleteAll()
+        authTokenRepository.deleteAll()
         organizationUserRepository.deleteAll()
         organizationRepository.deleteAll()
         userRepository.deleteAll()
@@ -71,7 +79,8 @@ class OrganizationControllerTest {
             plan = Plan.FREE,
             scheduleLimit = 100,
             currentUsage = 0,
-            nextReset = Instant.now().plus(30, ChronoUnit.DAYS)
+            nextReset = Instant.now().plus(30, ChronoUnit.DAYS),
+            timezone = "America/New_York"
         )
         testOrganization = organizationRepository.save(testOrganization)
         organizationId = testOrganization.id

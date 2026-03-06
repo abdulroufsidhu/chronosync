@@ -2,16 +2,20 @@ package com.chronosync.service
 
 import com.chronosync.dto.usage.PlanDto
 import com.chronosync.dto.usage.UpgradeResponse
+import com.chronosync.dto.usage.UsageCountDto
 import com.chronosync.dto.usage.UsageResponse
+import com.chronosync.entity.OrganizationUserStatus
 import com.chronosync.entity.Plan
 import com.chronosync.repository.OrganizationRepository
+import com.chronosync.repository.OrganizationUserRepository
 import com.chronosync.security.UserPrincipal
 import org.springframework.stereotype.Service
 import org.springframework.transaction.annotation.Transactional
 
 @Service
 class UsageService(
-    private val organizationRepository: OrganizationRepository
+    private val organizationRepository: OrganizationRepository,
+    private val organizationUserRepository: OrganizationUserRepository
 ) {
 
     @Transactional(readOnly = true)
@@ -19,18 +23,35 @@ class UsageService(
         val organization = organizationRepository.findById(principal.organizationId)
             .orElseThrow { IllegalArgumentException("Organization not found") }
 
-        val planLimit = when (organization.plan) {
+        val scheduleLimit = when (organization.plan) {
             Plan.FREE -> 100
             Plan.PRO -> 500
             Plan.ENTERPRISE -> Int.MAX_VALUE
         }
 
-        val blocked = organization.plan != Plan.ENTERPRISE && organization.currentUsage >= planLimit
+        val teamMemberLimit = when (organization.plan) {
+            Plan.FREE -> 5
+            Plan.PRO -> 20
+            Plan.ENTERPRISE -> Int.MAX_VALUE
+        }
+
+        val teamMemberCount = organizationUserRepository.countByOrganizationIdAndStatus(
+            principal.organizationId,
+            OrganizationUserStatus.ACTIVE
+        ).toInt()
+
+        val blocked = organization.plan != Plan.ENTERPRISE && organization.currentUsage >= scheduleLimit
 
         return UsageResponse(
             plan = organization.plan.name,
-            used = organization.currentUsage,
-            limit = planLimit,
+            schedules = UsageCountDto(
+                used = organization.currentUsage,
+                limit = scheduleLimit
+            ),
+            teamMembers = UsageCountDto(
+                used = teamMemberCount,
+                limit = teamMemberLimit
+            ),
             blocked = blocked,
             nextReset = organization.nextReset
         )
@@ -40,14 +61,17 @@ class UsageService(
     fun getUpgradePlans(): UpgradeResponse {
         val plans = Plan.entries.map { plan ->
             val features = when (plan) {
-                Plan.FREE -> listOf("Up to 100 schedules/month", "Basic features")
-                Plan.PRO -> listOf("Up to 500 schedules/month", "Priority support", "Advanced features")
-                Plan.ENTERPRISE -> listOf("Unlimited schedules", "24/7 support", "All features", "Custom integrations")
+                Plan.FREE -> listOf("100 schedules/month", "5 team members", "Basic features")
+                Plan.PRO -> listOf("500 schedules/month", "20 team members", "Priority support", "Advanced features")
+                Plan.ENTERPRISE -> listOf("Unlimited schedules", "Unlimited team members", "24/7 support", "All features", "Custom integrations")
             }
             PlanDto(
-                name = plan.name,
-                price = plan.price,
-                features = features
+                id = plan.name.lowercase(),
+                name = plan.displayName,
+                price = plan.priceValue,
+                yearlyPrice = if (plan.priceValue > 0) (plan.priceValue * 12 * 0.8).toInt() else null,
+                features = features,
+                isFeatured = plan == Plan.PRO
             )
         }
 

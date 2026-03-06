@@ -53,16 +53,24 @@ class ScheduleService(
     }
 
     @Transactional(readOnly = true)
-    fun getSchedules(principal: UserPrincipal, from: LocalDate, to: LocalDate): ScheduleListResponse {
+    fun getSchedules(principal: UserPrincipal, from: LocalDate, to: LocalDate, assignedUserId: UUID? = null): ScheduleListResponse {
         val startDate = from.atStartOfDay(ZoneId.systemDefault()).toInstant()
         val endDate = to.plusDays(1).atStartOfDay(ZoneId.systemDefault()).toInstant()
 
-        val schedules = if (isAdmin(principal.role)) {
-            scheduleRepository.findByOrganizationIdAndDateRange(principal.organizationId, startDate, endDate)
-        } else {
-            scheduleRepository.findByOrganizationIdAndAssignedUserIdAndDateRange(
-                principal.organizationId, principal.id, startDate, endDate
-            )
+        val schedules = when {
+            assignedUserId != null -> {
+                scheduleRepository.findByOrganizationIdAndAssignedUserIdAndDateRange(
+                    principal.organizationId, assignedUserId, startDate, endDate
+                )
+            }
+            isAdmin(principal.role) -> {
+                scheduleRepository.findByOrganizationIdAndDateRange(principal.organizationId, startDate, endDate)
+            }
+            else -> {
+                scheduleRepository.findByOrganizationIdAndAssignedUserIdAndDateRange(
+                    principal.organizationId, principal.id, startDate, endDate
+                )
+            }
         }
 
         return ScheduleListResponse(

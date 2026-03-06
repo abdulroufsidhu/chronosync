@@ -31,6 +31,7 @@ class AuthService(
         private const val TOKEN_LENGTH = 32
         private const val PASSWORD_RESET_EXPIRY_HOURS = 1L
         private const val MAGIC_LINK_EXPIRY_MINUTES = 15L
+        private const val INVITATION_EXPIRY_DAYS = 7L
     }
 
     @Transactional
@@ -56,6 +57,7 @@ class AuthService(
             accessToken = token,
             user = UserDto(
                 id = user.id.toString(),
+                name = user.getFullNameOrEmail(),
                 email = user.email,
                 role = orgUser.role.name,
                 firstName = user.firstName,
@@ -131,6 +133,7 @@ class AuthService(
             accessToken = token,
             user = UserDto(
                 id = savedUser.id.toString(),
+                name = savedUser.getFullNameOrEmail(),
                 email = savedUser.email,
                 role = ownerRole.name,
                 firstName = savedUser.firstName,
@@ -254,6 +257,104 @@ class AuthService(
         return createAuthResponse(user)
     }
 
+    @Transactional
+    fun switchOrganization(userId: UUID, organizationId: UUID): AuthResponse {
+        val orgUser = organizationUserRepository.findByUserIdAndOrganizationId(userId, organizationId)
+            ?: throw IllegalArgumentException("User does not belong to this organization")
+
+        val token = jwtUtil.generateToken(
+            userId = userId,
+            email = orgUser.user.email,
+            organizationId = organizationId,
+            role = orgUser.role.name
+        )
+
+        return AuthResponse(
+            accessToken = token,
+            user = UserDto(
+                id = orgUser.user.id.toString(),
+                name = orgUser.user.getFullNameOrEmail(),
+                email = orgUser.user.email,
+                role = orgUser.role.name,
+                firstName = orgUser.user.firstName,
+                lastName = orgUser.user.lastName,
+                phoneNumber = orgUser.user.phoneNumber,
+            ),
+            organization = OrganizationDto(
+                id = orgUser.organization.id.toString(),
+                name = orgUser.organization.name,
+                plan = orgUser.organization.plan.name,
+                role = orgUser.role.name,
+                timezone = orgUser.organization.timezone
+            )
+        )
+    }
+
+    @Transactional
+    fun acceptInvitation(token: String, firstName: String, lastName: String, password: String): AuthResponse {
+        val authToken = authTokenRepository.findByTokenAndType(token, AuthTokenType.INVITATION)
+            ?: throw IllegalArgumentException("Invalid or expired invitation")
+
+        if (!authToken.isValid()) {
+            throw IllegalArgumentException("Invalid or expired invitation")
+        }
+
+        if (password.length < 8) {
+            throw IllegalArgumentException("Password must be at least 8 characters long")
+        }
+
+        val user = authToken.user
+        val encodedPassword = passwordEncoder.encode(password)
+
+        val updatedUser = user.copy(
+            firstName = firstName,
+            lastName = lastName,
+            password = encodedPassword,
+            status = UserStatus.ACTIVE,
+            updatedAt = Instant.now()
+        )
+        userRepository.save(updatedUser)
+
+        val orgUser = organizationUserRepository.findByUserId(user.id).firstOrNull()
+            ?: throw IllegalStateException("User not associated with any organization")
+
+        val updatedOrgUser = orgUser.copy(
+            status = OrganizationUserStatus.ACTIVE,
+            updatedAt = Instant.now()
+        )
+        organizationUserRepository.save(updatedOrgUser)
+
+        val usedToken = authToken.copy(usedAt = Instant.now())
+        authTokenRepository.save(usedToken)
+
+        val newToken = jwtUtil.generateToken(
+            userId = user.id,
+            email = user.email,
+            organizationId = orgUser.organization.id,
+            role = orgUser.role.name
+        )
+
+        return AuthResponse(
+            accessToken = newToken,
+            user = UserDto(
+                id = user.id.toString(),
+                name = updatedUser.getFullNameOrEmail(),
+                email = user.email,
+                role = orgUser.role.name,
+                firstName = updatedUser.firstName,
+                lastName = updatedUser.lastName,
+                phoneNumber = updatedUser.phoneNumber,
+            ),
+            organization = OrganizationDto(
+                id = orgUser.organization.id.toString(),
+                name = orgUser.organization.name,
+                plan = orgUser.organization.plan.name,
+                role = orgUser.role.name,
+                timezone = orgUser.organization.timezone
+            )
+        )
+    }
+
     private fun createAuthResponse(user: User): AuthResponse {
         val orgUser = organizationUserRepository.findByUserId(user.id).firstOrNull()
             ?: throw IllegalStateException("User not associated with any organization")
@@ -269,6 +370,7 @@ class AuthService(
             accessToken = token,
             user = UserDto(
                 id = user.id.toString(),
+                name = user.getFullNameOrEmail(),
                 email = user.email,
                 role = orgUser.role.name,
                 firstName = user.firstName,

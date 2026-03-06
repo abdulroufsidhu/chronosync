@@ -69,6 +69,20 @@ class EmailService(
     }
 
     @Async
+    fun sendInvitationEmail(email: String, token: String, organizationName: String, inviterName: String) {
+        try {
+            val invitationUrl = "$frontendUrl/accept-invitation?token=$token"
+            val subject = "You're invited to join $organizationName on ChronoSync"
+            val content = buildInvitationEmail(invitationUrl, organizationName, inviterName)
+
+            sendHtmlEmail(email, subject, content)
+            logger.info("Invitation email sent to: $email")
+        } catch (e: Exception) {
+            logger.error("Failed to send invitation email to: $email", e)
+        }
+    }
+
+    @Async
     fun sendScheduleNotification(
         schedule: Schedule,
         organization: Organization,
@@ -137,6 +151,7 @@ class EmailService(
             NotificationType.SCHEDULE_CREATED -> "Appointment Confirmed - ${schedule.title}"
             NotificationType.SCHEDULE_UPDATED -> "Appointment Updated - ${schedule.title}"
             NotificationType.SCHEDULE_CANCELLED -> "Appointment Cancelled - ${schedule.title}"
+            else -> "Notification - ${schedule.title}"
         }
 
         val htmlContent = if (recipientType == RecipientType.STAFF) {
@@ -180,6 +195,7 @@ class EmailService(
             NotificationType.SCHEDULE_CREATED -> "New Appointment Scheduled"
             NotificationType.SCHEDULE_UPDATED -> "Appointment Updated"
             NotificationType.SCHEDULE_CANCELLED -> "Appointment Cancelled"
+            else -> "Notification"
         }
 
         return """
@@ -198,6 +214,7 @@ class EmailService(
                         NotificationType.SCHEDULE_CREATED -> "<p>A new appointment has been scheduled for you.</p>"
                         NotificationType.SCHEDULE_UPDATED -> "<p>An appointment has been updated.</p>"
                         NotificationType.SCHEDULE_CANCELLED -> "<p>An appointment has been cancelled.</p>"
+                        else -> "<p>You have a new notification.</p>"
                     }}
                     
                     <div style="background: #f5f5f5; padding: 20px; margin: 20px 0; border-radius: 5px;">
@@ -243,6 +260,7 @@ class EmailService(
             NotificationType.SCHEDULE_CREATED -> "Your Appointment is Confirmed"
             NotificationType.SCHEDULE_UPDATED -> "Your Appointment has been Updated"
             NotificationType.SCHEDULE_CANCELLED -> "Your Appointment has been Cancelled"
+            else -> "Notification"
         }
 
         val greeting = clientName?.let { "Hi $it," } ?: "Hello,"
@@ -268,6 +286,7 @@ class EmailService(
                         NotificationType.SCHEDULE_CREATED -> "<p>Your appointment has been scheduled with us. Here are the details:</p>"
                         NotificationType.SCHEDULE_UPDATED -> "<p>Your appointment details have been updated. Here are the new details:</p>"
                         NotificationType.SCHEDULE_CANCELLED -> "<p>Your appointment has been cancelled. Here were the details:</p>"
+                        else -> "<p>You have a new notification. Here are the details:</p>"
                     }}
                     
                     <div style="background: #f5f5f5; padding: 20px; margin: 20px 0; border-radius: 5px;">
@@ -419,6 +438,35 @@ class EmailService(
                     <p>Or copy and paste this link into your browser:</p>
                     <p style="word-break: break-all; color: #9b59b6;">$verifyUrl</p>
                     <p>This link will expire in 24 hours.</p>
+                    <hr style="border: none; border-top: 1px solid #eee; margin: 20px 0;">
+                    <p style="color: #999; font-size: 12px;">ChronoSync - Your scheduling solution</p>
+                </div>
+            </body>
+            </html>
+        """.trimIndent()
+    }
+
+    private fun buildInvitationEmail(invitationUrl: String, organizationName: String, inviterName: String): String {
+        return """
+            <!DOCTYPE html>
+            <html>
+            <head>
+                <meta charset="UTF-8">
+                <title>You're Invited</title>
+            </head>
+            <body style="font-family: Arial, sans-serif; line-height: 1.6; color: #333;">
+                <div style="max-width: 600px; margin: 0 auto; padding: 20px;">
+                    <h2 style="color: #2c3e50;">You're Invited to Join $organizationName</h2>
+                    <p>Hello,</p>
+                    <p><strong>$inviterName</strong> has invited you to join their organization on ChronoSync.</p>
+                    <p>ChronoSync is a powerful scheduling and team management platform. Click the button below to accept the invitation and create your account:</p>
+                    <div style="text-align: center; margin: 30px 0;">
+                        <a href="$invitationUrl" style="background-color: #3498db; color: white; padding: 12px 30px; text-decoration: none; border-radius: 5px; display: inline-block;">Accept Invitation</a>
+                    </div>
+                    <p>Or copy and paste this link into your browser:</p>
+                    <p style="word-break: break-all; color: #3498db;">$invitationUrl</p>
+                    <p>This invitation will expire in 7 days.</p>
+                    <p>If you weren't expecting this invitation, you can safely ignore this email.</p>
                     <hr style="border: none; border-top: 1px solid #eee; margin: 20px 0;">
                     <p style="color: #999; font-size: 12px;">ChronoSync - Your scheduling solution</p>
                 </div>

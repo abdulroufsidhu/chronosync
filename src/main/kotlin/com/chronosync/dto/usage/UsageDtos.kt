@@ -25,11 +25,11 @@ data class UsageResponse(
     @Schema(description = "Current subscription plan", example = "FREE")
     val plan: String,
 
-    @Schema(description = "Number of schedules used this period")
-    val used: Int,
+    @Schema(description = "Schedule usage")
+    val schedules: UsageCountDto,
 
-    @Schema(description = "Maximum number of schedules allowed")
-    val limit: Int,
+    @Schema(description = "Team member usage")
+    val teamMembers: UsageCountDto,
 
     @Schema(description = "Whether new schedules are blocked due to limit reached")
     val blocked: Boolean,
@@ -38,15 +38,32 @@ data class UsageResponse(
     val nextReset: Instant?
 )
 
+data class UsageCountDto(
+    @Schema(description = "Number used")
+    val used: Int,
+
+    @Schema(description = "Maximum allowed")
+    val limit: Int
+)
+
 data class PlanDto(
-    @Schema(description = "Plan name", example = "PRO")
+    @Schema(description = "Plan ID", example = "free")
+    val id: String,
+
+    @Schema(description = "Plan name", example = "Free")
     val name: String,
 
-    @Schema(description = "Plan price", example = "$5/month")
-    val price: String,
+    @Schema(description = "Plan price", example = "0")
+    val price: Int,
+
+    @Schema(description = "Yearly price", example = "0")
+    val yearlyPrice: Int?,
 
     @Schema(description = "List of features included in the plan")
-    val features: List<String>
+    val features: List<String>,
+
+    @Schema(description = "Whether this plan is featured")
+    val isFeatured: Boolean
 )
 
 data class UpgradeResponse(

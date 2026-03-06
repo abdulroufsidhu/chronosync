@@ -2,6 +2,8 @@ package com.chronosync.controller
 
 import com.chronosync.dto.auth.*
 import com.chronosync.dto.common.ApiResponse
+import com.chronosync.security.CurrentUser
+import com.chronosync.security.UserPrincipal
 import com.chronosync.service.AuthService
 import io.swagger.v3.oas.annotations.Operation
 import io.swagger.v3.oas.annotations.media.Content
@@ -12,6 +14,7 @@ import jakarta.servlet.http.HttpServletRequest
 import org.springframework.http.HttpStatus
 import org.springframework.http.ResponseEntity
 import org.springframework.web.bind.annotation.*
+import java.util.UUID
 
 @RestController
 @RequestMapping("/api/auth")
@@ -126,6 +129,42 @@ class AuthController(
     fun verifyMagicLink(@RequestParam token: String): ResponseEntity<ApiResponse<AuthResponse>> {
         return try {
             val response = authService.verifyMagicLink(token)
+            ResponseEntity.ok(ApiResponse(success = true, data = response))
+        } catch (e: IllegalArgumentException) {
+            ResponseEntity.badRequest().body(ApiResponse(success = false, message = e.message))
+        }
+    }
+
+    @PostMapping("/switch-organization")
+    @Operation(
+        summary = "Switch organization",
+        description = "Switch to a different organization the user belongs to"
+    )
+    fun switchOrganization(
+        @RequestBody request: SwitchOrganizationRequest,
+        @CurrentUser principal: com.chronosync.security.UserPrincipal
+    ): ResponseEntity<ApiResponse<AuthResponse>> {
+        return try {
+            val response = authService.switchOrganization(principal.id, UUID.fromString(request.organizationId))
+            ResponseEntity.ok(ApiResponse(success = true, data = response))
+        } catch (e: IllegalArgumentException) {
+            ResponseEntity.badRequest().body(ApiResponse(success = false, message = e.message))
+        }
+    }
+
+    @PostMapping("/accept-invitation")
+    @Operation(
+        summary = "Accept invitation",
+        description = "Accept an organization invitation and create an account"
+    )
+    fun acceptInvitation(@RequestBody request: AcceptInvitationRequest): ResponseEntity<ApiResponse<AuthResponse>> {
+        return try {
+            val response = authService.acceptInvitation(
+                request.token,
+                request.firstName,
+                request.lastName,
+                request.password
+            )
             ResponseEntity.ok(ApiResponse(success = true, data = response))
         } catch (e: IllegalArgumentException) {
             ResponseEntity.badRequest().body(ApiResponse(success = false, message = e.message))

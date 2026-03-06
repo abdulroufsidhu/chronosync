@@ -15,4 +15,5 @@ interface OrganizationUserRepository : JpaRepository<OrganizationUser, UUID> {
     fun findByOrganizationIdAndStatus(organizationId: UUID, status: OrganizationUserStatus): List<OrganizationUser>
     fun findByOrganizationIdAndRole(organizationId: UUID, role: OrganizationRole): List<OrganizationUser>
     fun existsByUserIdAndOrganizationId(userId: UUID, organizationId: UUID): Boolean
+    fun countByOrganizationIdAndStatus(organizationId: UUID, status: OrganizationUserStatus): Long
 }

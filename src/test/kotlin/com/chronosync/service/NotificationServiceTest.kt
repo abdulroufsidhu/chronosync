@@ -2,6 +2,8 @@ package com.chronosync.service
 
 import com.chronosync.entity.*
 import com.chronosync.repository.NotificationLogRepository
+import com.chronosync.repository.NotificationRepository
+import com.chronosync.repository.UserRepository
 import org.junit.jupiter.api.Assertions.*
 import org.junit.jupiter.api.BeforeEach
 import org.junit.jupiter.api.Test
@@ -14,13 +16,17 @@ class NotificationServiceTest {
 
     private lateinit var emailService: EmailService
     private lateinit var notificationLogRepository: NotificationLogRepository
+    private lateinit var notificationRepository: NotificationRepository
+    private lateinit var userRepository: UserRepository
     private lateinit var notificationService: NotificationService
 
     @BeforeEach
     fun setUp() {
         emailService = mock(EmailService::class.java)
         notificationLogRepository = mock(NotificationLogRepository::class.java)
-        notificationService = NotificationService(emailService, notificationLogRepository)
+        notificationRepository = mock(NotificationRepository::class.java)
+        userRepository = mock(UserRepository::class.java)
+        notificationService = NotificationService(emailService, notificationLogRepository, notificationRepository, userRepository)
     }
 
     @Test

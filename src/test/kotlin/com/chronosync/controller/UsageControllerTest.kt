@@ -44,6 +44,12 @@ class UsageControllerTest {
     @Autowired
     private lateinit var organizationUserRepository: OrganizationUserRepository
 
+    @Autowired
+    private lateinit var authTokenRepository: AuthTokenRepository
+
+    @Autowired
+    private lateinit var scheduleRepository: ScheduleRepository
+
     private lateinit var testUser: User
     private lateinit var testOrganization: Organization
     private lateinit var token: String
@@ -51,6 +57,8 @@ class UsageControllerTest {
 
     @BeforeEach
     fun setUp() {
+        scheduleRepository.deleteAll()
+        authTokenRepository.deleteAll()
         organizationUserRepository.deleteAll()
         organizationRepository.deleteAll()
         userRepository.deleteAll()
@@ -67,7 +75,8 @@ class UsageControllerTest {
             plan = Plan.FREE,
             scheduleLimit = 100,
             currentUsage = 45,
-            nextReset = Instant.now().plus(30, ChronoUnit.DAYS)
+            nextReset = Instant.now().plus(30, ChronoUnit.DAYS),
+            timezone = "America/New_York"
         )
         testOrganization = organizationRepository.save(testOrganization)
         organizationId = testOrganization.id
@@ -109,8 +118,8 @@ class UsageControllerTest {
         val usageResponse = objectMapper.readValue(dataJson, com.chronosync.dto.usage.UsageResponse::class.java)
 
         assertEquals("FREE", usageResponse.plan)
-        assertEquals(45, usageResponse.used)
-        assertEquals(100, usageResponse.limit)
+        assertEquals(45, usageResponse.schedules.used)
+        assertEquals(100, usageResponse.schedules.limit)
         assertFalse(usageResponse.blocked)
         assertNotNull(usageResponse.nextReset)
     }
@@ -161,9 +170,9 @@ class UsageControllerTest {
         val upgradeResponse = objectMapper.readValue(dataJson, com.chronosync.dto.usage.UpgradeResponse::class.java)
 
         assertEquals(3, upgradeResponse.plans.size)
-        assertEquals("FREE", upgradeResponse.plans[0].name)
-        assertEquals("PRO", upgradeResponse.plans[1].name)
-        assertEquals("ENTERPRISE", upgradeResponse.plans[2].name)
+        assertEquals("Free", upgradeResponse.plans[0].name)
+        assertEquals("Pro", upgradeResponse.plans[1].name)
+        assertEquals("Enterprise", upgradeResponse.plans[2].name)
     }
 
     @Test
@@ -190,7 +199,7 @@ class UsageControllerTest {
         val usageResponse = objectMapper.readValue(dataJson, com.chronosync.dto.usage.UsageResponse::class.java)
 
         assertEquals("PRO", usageResponse.plan)
-        assertEquals(500, usageResponse.limit)
+        assertEquals(500, usageResponse.schedules.limit)
     }
 
     @Test

@@ -58,7 +58,8 @@ enum class RecipientType {
 }
 
 enum class NotificationType {
-    SCHEDULE_CREATED, SCHEDULE_UPDATED, SCHEDULE_CANCELLED
+    SCHEDULE_CREATED, SCHEDULE_UPDATED, SCHEDULE_CANCELLED,
+    SCHEDULE, TEAM, BILLING, SYSTEM
 }
 
 enum class NotificationStatus {
