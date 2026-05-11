@@ -5,7 +5,6 @@ import com.chronosync.dto.settings.NotificationSettingsDto
 import com.chronosync.dto.settings.PrivacySettingsDto
 import com.chronosync.dto.settings.UpdateSettingsRequest
 import com.chronosync.dto.settings.UserSettingsResponse
-import com.chronosync.entity.User
 import com.chronosync.entity.UserSettings
 import com.chronosync.repository.UserRepository
 import com.chronosync.repository.UserSettingsRepository
@@ -26,27 +25,11 @@ class UserSettingsService(
     fun getSettings(principal: UserPrincipal): UserSettingsResponse {
         val userSettings = userSettingsRepository.findByUserId(principal.id)
             ?: return createDefaultSettings(principal)
-
-        return UserSettingsResponse(
-            twoFactorEnabled = userSettings.twoFactorEnabled,
-            notifications = NotificationSettingsDto(
-                push = userSettings.pushNotifications,
-                email = userSettings.emailNotifications,
-                sms = userSettings.smsNotifications,
-                scheduleReminders = userSettings.scheduleReminders
-            ),
-            privacy = PrivacySettingsDto(
-                showAvailability = userSettings.showAvailability,
-                dataAnalytics = userSettings.dataAnalytics
-            )
-        )
+        return userSettings.toResponse()
     }
 
     @Transactional
     fun updateSettings(principal: UserPrincipal, request: UpdateSettingsRequest): UserSettingsResponse {
-        val user = userRepository.findById(principal.id)
-            .orElseThrow { IllegalArgumentException("User not found") }
-
         val existingSettings = userSettingsRepository.findByUserId(principal.id)
 
         val updatedSettings = if (existingSettings != null) {
@@ -61,6 +44,8 @@ class UserSettingsService(
                 updatedAt = Instant.now()
             )
         } else {
+            val user = userRepository.findById(principal.id)
+                .orElseThrow { IllegalArgumentException("User not found") }
             UserSettings(
                 user = user,
                 twoFactorEnabled = request.twoFactorEnabled ?: false,
@@ -74,20 +59,7 @@ class UserSettingsService(
         }
 
         userSettingsRepository.save(updatedSettings)
-
-        return UserSettingsResponse(
-            twoFactorEnabled = updatedSettings.twoFactorEnabled,
-            notifications = NotificationSettingsDto(
-                push = updatedSettings.pushNotifications,
-                email = updatedSettings.emailNotifications,
-                sms = updatedSettings.smsNotifications,
-                scheduleReminders = updatedSettings.scheduleReminders
-            ),
-            privacy = PrivacySettingsDto(
-                showAvailability = updatedSettings.showAvailability,
-                dataAnalytics = updatedSettings.dataAnalytics
-            )
-        )
+        return updatedSettings.toResponse()
     }
 
     @Transactional
@@ -103,12 +75,7 @@ class UserSettingsService(
             throw IllegalArgumentException("New password must be at least 8 characters long")
         }
 
-        val updatedUser = user.copy(
-            password = passwordEncoder.encode(request.newPassword),
-            updatedAt = Instant.now()
-        )
-        userRepository.save(updatedUser)
-
+        userRepository.save(user.copy(password = passwordEncoder.encode(request.newPassword), updatedAt = Instant.now()))
         return true
     }
 
@@ -127,19 +94,20 @@ class UserSettingsService(
             dataAnalytics = true
         )
         userSettingsRepository.save(settings)
-
-        return UserSettingsResponse(
-            twoFactorEnabled = false,
-            notifications = NotificationSettingsDto(
-                push = true,
-                email = true,
-                sms = false,
-                scheduleReminders = true
-            ),
-            privacy = PrivacySettingsDto(
-                showAvailability = true,
-                dataAnalytics = true
-            )
-        )
+        return settings.toResponse()
     }
+
+    private fun UserSettings.toResponse() = UserSettingsResponse(
+        twoFactorEnabled = twoFactorEnabled,
+        notifications = NotificationSettingsDto(
+            push = pushNotifications,
+            email = emailNotifications,
+            sms = smsNotifications,
+            scheduleReminders = scheduleReminders
+        ),
+        privacy = PrivacySettingsDto(
+            showAvailability = showAvailability,
+            dataAnalytics = dataAnalytics
+        )
+    )
 }

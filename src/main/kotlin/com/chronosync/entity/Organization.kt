@@ -34,6 +34,12 @@ data class Organization(
     @Column(name = "next_reset")
     val nextReset: Instant? = null,
 
+    @Column
+    val latitude: Double? = null,
+
+    @Column
+    val longitude: Double? = null,
+
     @Column(nullable = false)
     val timezone: String = "UTC",
 

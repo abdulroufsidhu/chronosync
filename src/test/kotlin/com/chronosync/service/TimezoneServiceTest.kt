@@ -1,5 +1,6 @@
 package com.chronosync.service
 
+import com.fasterxml.jackson.databind.ObjectMapper
 import org.junit.jupiter.api.Assertions.*
 import org.junit.jupiter.api.Test
 import java.time.Instant
@@ -9,7 +10,9 @@ class TimezoneServiceTest {
 
     private val timezoneService = TimezoneService(
         ipApiEnabled = true,
-        ipApiUrl = "https://ipapi.co"
+        ipApiUrl = "https://ipapi.co",
+        geoApiEnabled = false,
+        objectMapper = ObjectMapper()
     )
 
     @Test

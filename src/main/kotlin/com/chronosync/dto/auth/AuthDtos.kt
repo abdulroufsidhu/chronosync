@@ -46,11 +46,16 @@ data class OrganizationInfoRegisterDto(
     val role: String,
 
     @Schema(
-        description = "Timezone for the organization (IANA format). Auto-detected from IP if not provided.",
-        example = "America/New_York",
-        required = false
+        description = "Timezone for the organization (IANA format). Auto-detected from coordinates or IP if not provided.",
+        example = "America/New_York"
     )
-    val timezone: String? = null
+    val timezone: String? = null,
+
+    @Schema(description = "Latitude of the organization's location", example = "40.7128")
+    val latitude: Double? = null,
+
+    @Schema(description = "Longitude of the organization's location", example = "-74.0060")
+    val longitude: Double? = null
 )
 
 data class AuthResponse(
@@ -99,7 +104,13 @@ data class OrganizationDto(
     val role: String,
 
     @Schema(description = "Organization timezone (IANA format)", example = "America/New_York")
-    val timezone: String
+    val timezone: String,
+
+    @Schema(description = "Latitude of the organization's location")
+    val latitude: Double? = null,
+
+    @Schema(description = "Longitude of the organization's location")
+    val longitude: Double? = null
 )
 
 data class ForgotPasswordRequest(

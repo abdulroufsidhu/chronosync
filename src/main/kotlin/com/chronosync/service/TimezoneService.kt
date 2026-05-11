@@ -1,5 +1,6 @@
 package com.chronosync.service
 
+import com.fasterxml.jackson.databind.ObjectMapper
 import org.slf4j.LoggerFactory
 import org.springframework.beans.factory.annotation.Value
 import org.springframework.stereotype.Service
@@ -11,7 +12,9 @@ import java.time.ZonedDateTime
 @Service
 class TimezoneService(
     @Value("\${app.timezone.ip-api.enabled:true}") private val ipApiEnabled: Boolean,
-    @Value("\${app.timezone.ip-api.url:https://ipapi.co}") private val ipApiUrl: String
+    @Value("\${app.timezone.ip-api.url:https://ipapi.co}") private val ipApiUrl: String,
+    @Value("\${app.timezone.geo-api.enabled:true}") private val geoApiEnabled: Boolean,
+    private val objectMapper: ObjectMapper
 ) {
     private val logger = LoggerFactory.getLogger(TimezoneService::class.java)
 
@@ -20,7 +23,6 @@ class TimezoneService(
             return "UTC"
         }
 
-        // Handle local/development IPs
         if (isLocalIp(clientIp)) {
             logger.info("Local IP detected ($clientIp), using UTC as default timezone")
             return "UTC"
@@ -39,6 +41,29 @@ class TimezoneService(
             }
         } catch (e: Exception) {
             logger.error("Failed to detect timezone from IP: $clientIp", e)
+            "UTC"
+        }
+    }
+
+    fun detectTimezoneFromCoordinates(latitude: Double, longitude: Double): String {
+        if (!geoApiEnabled) return "UTC"
+        return try {
+            val url = "https://api.bigdatacloud.net/data/reverse-geocode-client?latitude=$latitude&longitude=$longitude&localityLanguage=en"
+            val json = URL(url).readText()
+            val ianaId = objectMapper.readTree(json)
+                .path("localTimezone")
+                .path("ianaTimeId")
+                .asText("")
+
+            if (ianaId.isNotBlank() && isValidTimezone(ianaId)) {
+                logger.info("Detected timezone '$ianaId' from coordinates ($latitude, $longitude)")
+                ianaId
+            } else {
+                logger.warn("Invalid timezone from coordinates ($latitude, $longitude): '$ianaId'")
+                "UTC"
+            }
+        } catch (e: Exception) {
+            logger.error("Failed to detect timezone from coordinates ($latitude, $longitude)", e)
             "UTC"
         }
     }

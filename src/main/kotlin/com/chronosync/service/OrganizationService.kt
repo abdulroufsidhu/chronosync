@@ -1,5 +1,6 @@
 package com.chronosync.service
 
+import com.chronosync.dto.auth.OrganizationDto
 import com.chronosync.dto.organization.*
 import com.chronosync.entity.AuthToken
 import com.chronosync.entity.AuthTokenType
@@ -33,7 +34,8 @@ class OrganizationService(
     private val authTokenRepository: AuthTokenRepository,
     private val scheduleRepository: ScheduleRepository,
     private val passwordEncoder: PasswordEncoder,
-    private val emailService: EmailService
+    private val emailService: EmailService,
+    private val timezoneService: TimezoneService
 ) {
 
     companion object {
@@ -46,10 +48,6 @@ class OrganizationService(
         val orgUsers = organizationUserRepository.findByOrganizationId(principal.organizationId)
 
         return orgUsers.map { orgUser ->
-            val createdBy = orgUser.createdAt?.let { createdAt ->
-                findCreator(orgUser, createdAt)
-            }
-
             UserListDto(
                 id = orgUser.user.id.toString(),
                 name = orgUser.user.getFullNameOrEmail(),
@@ -58,7 +56,7 @@ class OrganizationService(
                 status = orgUser.status.name,
                 createdAt = orgUser.createdAt,
                 updatedAt = orgUser.updatedAt,
-                createdBy = createdBy
+                createdBy = null
             )
         }
     }
@@ -68,8 +66,6 @@ class OrganizationService(
         val orgUser = organizationUserRepository.findByUserIdAndOrganizationId(userId, principal.organizationId)
             ?: throw IllegalArgumentException("User not found in organization")
 
-        val createdBy = orgUser.createdAt?.let { findCreator(orgUser, it) }
-
         return UserListDto(
             id = orgUser.user.id.toString(),
             name = orgUser.user.getFullNameOrEmail(),
@@ -78,21 +74,8 @@ class OrganizationService(
             status = orgUser.status.name,
             createdAt = orgUser.createdAt,
             updatedAt = orgUser.updatedAt,
-            createdBy = createdBy
+            createdBy = null
         )
-    }
-
-    private fun findCreator(orgUser: OrganizationUser, createdAt: java.time.Instant): CreatedByDto? {
-        val allUsers = organizationUserRepository.findByOrganizationId(orgUser.organization.id)
-        val creator = allUsers.find { it.id != orgUser.id }
-        return creator?.let {
-            CreatedByDto(
-                id = it.user.id.toString(),
-                name = "${it.user.firstName ?: ""} ${it.user.lastName ?: ""}".trim(),
-                email = it.user.email,
-                role = it.role.name
-            )
-        }
     }
 
     @Transactional(readOnly = true)
@@ -105,7 +88,7 @@ class OrganizationService(
         return orgUsers.map { orgUser ->
             UserDropdownDto(
                 id = orgUser.user.id.toString(),
-                name = "${orgUser.user.firstName ?: ""} ${orgUser.user.lastName ?: ""}".trim().ifEmpty { orgUser.user.email }
+                name = orgUser.user.getFullNameOrEmail()
             )
         }
     }
@@ -201,11 +184,7 @@ class OrganizationService(
             throw IllegalArgumentException("Cannot change owner role")
         }
 
-        val updatedOrgUser = orgUser.copy(
-            role = mapRole(request.role),
-            updatedAt = java.time.Instant.now()
-        )
-        organizationUserRepository.save(updatedOrgUser)
+        organizationUserRepository.save(orgUser.copy(role = mapRole(request.role), updatedAt = Instant.now()))
 
         return true
     }
@@ -224,16 +203,15 @@ class OrganizationService(
 
     @Transactional(readOnly = true)
     fun getUserStats(principal: UserPrincipal, userId: UUID): MemberStatsDto {
-        val orgUser = organizationUserRepository.findByUserIdAndOrganizationId(userId, principal.organizationId)
+        organizationUserRepository.findByUserIdAndOrganizationId(userId, principal.organizationId)
             ?: throw IllegalArgumentException("User not found in organization")
 
-        val now = Instant.now()
         val startOfMonth = LocalDate.now().withDayOfMonth(1).atStartOfDay(ZoneId.systemDefault()).toInstant()
         val endOfMonth = LocalDate.now().plusMonths(1).withDayOfMonth(1).atStartOfDay(ZoneId.systemDefault()).toInstant()
 
         val totalSchedules = scheduleRepository.countByOrganizationId(principal.organizationId)
         val thisMonthSchedules = scheduleRepository.countByOrganizationIdAndMonth(principal.organizationId, startOfMonth, endOfMonth)
-        
+
         val completedSchedules = if (totalSchedules > 0) {
             (totalSchedules * 0.85).toInt()
         } else 0
@@ -246,6 +224,44 @@ class OrganizationService(
             totalSchedules = totalSchedules.toInt(),
             thisMonth = thisMonthSchedules.toInt(),
             completionRate = completionRate
+        )
+    }
+
+    @Transactional
+    fun updateOrganization(principal: UserPrincipal, request: UpdateOrganizationRequest): OrganizationDto {
+        if (!isAdmin(principal.role)) {
+            throw IllegalArgumentException("Only admins can update organization settings")
+        }
+
+        val organization = organizationRepository.findById(principal.organizationId)
+            .orElseThrow { IllegalArgumentException("Organization not found") }
+
+        val lat = request.latitude ?: organization.latitude
+        val lng = request.longitude ?: organization.longitude
+
+        val timezone = if (request.latitude != null && request.longitude != null) {
+            timezoneService.detectTimezoneFromCoordinates(request.latitude, request.longitude)
+        } else {
+            organization.timezone
+        }
+
+        val updated = organization.copy(
+            name = request.name ?: organization.name,
+            latitude = lat,
+            longitude = lng,
+            timezone = timezone,
+            updatedAt = Instant.now()
+        )
+        val saved = organizationRepository.save(updated)
+
+        return OrganizationDto(
+            id = saved.id.toString(),
+            name = saved.name,
+            plan = saved.plan.name,
+            role = principal.role,
+            timezone = saved.timezone,
+            latitude = saved.latitude,
+            longitude = saved.longitude
         )
     }
 

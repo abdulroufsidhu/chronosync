@@ -100,14 +100,12 @@ class EmailService(
                 return
             }
 
-            // Generate calendar event
             val icsContent = calendarService.generateEvent(
                 schedule,
                 organization,
                 method = if (notificationType == NotificationType.SCHEDULE_CANCELLED) CalendarMethod.CANCEL else CalendarMethod.REQUEST
             )
 
-            // Build email content
             val (subject, htmlContent) = buildScheduleEmail(
                 schedule,
                 organization,
@@ -116,8 +114,7 @@ class EmailService(
                 recipientName
             )
 
-            // Send email with calendar attachment
-            sendHtmlEmailWithAttachment(
+            sendEmail(
                 to = recipientEmail,
                 subject = subject,
                 htmlContent = htmlContent,
@@ -332,24 +329,16 @@ class EmailService(
     }
 
     private fun sendHtmlEmail(to: String, subject: String, htmlContent: String) {
-        val message = mailSender.createMimeMessage()
-        val helper = MimeMessageHelper(message, true, "UTF-8")
-
-        helper.setFrom(emailFrom)
-        helper.setTo(to)
-        helper.setSubject(subject)
-        helper.setText(htmlContent, true)
-
-        mailSender.send(message)
+        sendEmail(to, subject, htmlContent)
     }
 
-    private fun sendHtmlEmailWithAttachment(
+    private fun sendEmail(
         to: String,
         subject: String,
         htmlContent: String,
-        attachmentName: String,
-        attachmentContent: ByteArray,
-        attachmentType: String
+        attachmentName: String? = null,
+        attachmentContent: ByteArray? = null,
+        attachmentType: String? = null
     ) {
         val message = mailSender.createMimeMessage()
         val helper = MimeMessageHelper(message, true, "UTF-8")
@@ -358,7 +347,9 @@ class EmailService(
         helper.setTo(to)
         helper.setSubject(subject)
         helper.setText(htmlContent, true)
-        helper.addAttachment(attachmentName, ByteArrayResource(attachmentContent), attachmentType)
+        if (attachmentName != null && attachmentContent != null && attachmentType != null) {
+            helper.addAttachment(attachmentName, ByteArrayResource(attachmentContent), attachmentType)
+        }
 
         mailSender.send(message)
     }

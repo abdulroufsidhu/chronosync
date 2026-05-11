@@ -1,5 +1,6 @@
 package com.chronosync.controller
 
+import com.chronosync.dto.auth.OrganizationDto
 import com.chronosync.dto.common.ApiResponse
 import com.chronosync.dto.organization.*
 import com.chronosync.security.CurrentUser
@@ -56,6 +57,19 @@ class OrganizationController(
     fun getUserDropdowns(@CurrentUser principal: UserPrincipal): ResponseEntity<ApiResponse<List<UserDropdownDto>>> {
         return try {
             val response = organizationService.getUserDropdowns(principal)
+            ResponseEntity.ok(ApiResponse(success = true, data = response))
+        } catch (e: IllegalArgumentException) {
+            ResponseEntity.badRequest().body(ApiResponse(success = false, message = e.message))
+        }
+    }
+
+    @PutMapping("/settings")
+    fun updateOrganization(
+        @CurrentUser principal: UserPrincipal,
+        @RequestBody request: UpdateOrganizationRequest
+    ): ResponseEntity<ApiResponse<OrganizationDto>> {
+        return try {
+            val response = organizationService.updateOrganization(principal, request)
             ResponseEntity.ok(ApiResponse(success = true, data = response))
         } catch (e: IllegalArgumentException) {
             ResponseEntity.badRequest().body(ApiResponse(success = false, message = e.message))

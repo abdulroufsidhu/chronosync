@@ -23,6 +23,11 @@ jwt:
   secret: chronosync-jwt-secret-key-for-authentication-must-be-at-least-256-bits-long
   expiration: 86400000
 
+app:
+  timezone:
+    geo-api:
+      enabled: false
+
 logging:
   level:
     com.chronosync: WARN

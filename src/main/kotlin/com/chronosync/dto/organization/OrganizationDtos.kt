@@ -80,3 +80,14 @@ data class MemberStatsDto(
     @Schema(description = "Completion rate percentage")
     val completionRate: Int
 )
+
+data class UpdateOrganizationRequest(
+    @Schema(description = "Organization name")
+    val name: String? = null,
+
+    @Schema(description = "Latitude of the organization's location", example = "40.7128")
+    val latitude: Double? = null,
+
+    @Schema(description = "Longitude of the organization's location", example = "-74.0060")
+    val longitude: Double? = null
+)

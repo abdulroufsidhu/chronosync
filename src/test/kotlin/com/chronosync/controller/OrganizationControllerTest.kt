@@ -2,6 +2,7 @@ package com.chronosync.controller
 
 import com.chronosync.config.TestSecurityConfig
 import com.chronosync.dto.organization.InviteUserRequest
+import com.chronosync.dto.organization.UpdateOrganizationRequest
 import com.chronosync.dto.organization.UpdateUserRoleRequest
 import com.chronosync.entity.*
 import com.chronosync.repository.*
@@ -298,6 +299,89 @@ class OrganizationControllerTest {
 
         mockMvc.perform(
             post("/api/organization/invite")
+                .header("Authorization", "Bearer $memberToken")
+                .contentType(MediaType.APPLICATION_JSON)
+                .content(objectMapper.writeValueAsString(request))
+        ).andExpect(
+            status().isBadRequest
+        )
+    }
+
+    @Test
+    fun `update organization name returns success`() {
+        val request = UpdateOrganizationRequest(name = "Updated Org Name")
+
+        val result: MvcResult = mockMvc.perform(
+            put("/api/organization/settings")
+                .header("Authorization", "Bearer $token")
+                .contentType(MediaType.APPLICATION_JSON)
+                .content(objectMapper.writeValueAsString(request))
+        ).andExpect(
+            status().isOk
+        ).andReturn()
+
+        val response = objectMapper.readValue(
+            result.response.contentAsString,
+            com.chronosync.dto.common.ApiResponse::class.java
+        )
+        assertTrue(response.success)
+
+        val saved = organizationRepository.findById(organizationId).get()
+        assertEquals("Updated Org Name", saved.name)
+    }
+
+    @Test
+    fun `update organization coordinates stores lat and lng`() {
+        val request = UpdateOrganizationRequest(latitude = 40.7128, longitude = -74.0060)
+
+        val result: MvcResult = mockMvc.perform(
+            put("/api/organization/settings")
+                .header("Authorization", "Bearer $token")
+                .contentType(MediaType.APPLICATION_JSON)
+                .content(objectMapper.writeValueAsString(request))
+        ).andExpect(
+            status().isOk
+        ).andReturn()
+
+        val response = objectMapper.readValue(
+            result.response.contentAsString,
+            com.chronosync.dto.common.ApiResponse::class.java
+        )
+        assertTrue(response.success)
+
+        val saved = organizationRepository.findById(organizationId).get()
+        assertEquals(40.7128, saved.latitude)
+        assertEquals(-74.0060, saved.longitude)
+    }
+
+    @Test
+    fun `member cannot update organization settings`() {
+        val memberUser = User(
+            email = "membersettings@example.com",
+            password = "password123",
+            status = UserStatus.ACTIVE
+        )
+        val savedMember = userRepository.save(memberUser)
+
+        val orgUser = OrganizationUser(
+            user = savedMember,
+            organization = testOrganization,
+            role = OrganizationRole.MEMBER,
+            status = OrganizationUserStatus.ACTIVE
+        )
+        organizationUserRepository.save(orgUser)
+
+        val memberToken = jwtUtil.generateToken(
+            savedMember.id,
+            savedMember.email,
+            organizationId,
+            OrganizationRole.MEMBER.name
+        )
+
+        val request = UpdateOrganizationRequest(name = "Should Not Update")
+
+        mockMvc.perform(
+            put("/api/organization/settings")
                 .header("Authorization", "Bearer $memberToken")
                 .contentType(MediaType.APPLICATION_JSON)
                 .content(objectMapper.writeValueAsString(request))

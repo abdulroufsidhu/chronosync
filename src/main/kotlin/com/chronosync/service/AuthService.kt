@@ -69,7 +69,9 @@ class AuthService(
                 name = orgUser.organization.name,
                 plan = orgUser.organization.plan.name,
                 role = orgUser.role.name,
-                timezone = orgUser.organization.timezone
+                timezone = orgUser.organization.timezone,
+                latitude = orgUser.organization.latitude,
+                longitude = orgUser.organization.longitude
             )
         )
     }
@@ -92,9 +94,13 @@ class AuthService(
         )
         val savedUser = userRepository.save(user)
 
-        // Determine timezone: use provided, detect from IP, or default to UTC
-        val timezone = request.organization.timezone
-            ?: timezoneService.detectTimezoneFromIp(clientIp)
+        val lat = request.organization.latitude
+        val lng = request.organization.longitude
+        val timezone = when {
+            lat != null && lng != null -> timezoneService.detectTimezoneFromCoordinates(lat, lng)
+            request.organization.timezone != null -> request.organization.timezone
+            else -> timezoneService.detectTimezoneFromIp(clientIp)
+        }
 
         val organization = Organization(
             name = request.organization.name,
@@ -103,6 +109,8 @@ class AuthService(
             plan = com.chronosync.entity.Plan.FREE,
             scheduleLimit = 100,
             currentUsage = 0,
+            latitude = lat,
+            longitude = lng,
             timezone = timezone,
             nextReset = Instant.now().plus(30, ChronoUnit.DAYS)
         )
@@ -145,7 +153,9 @@ class AuthService(
                 name = savedOrg.name,
                 plan = savedOrg.plan.name,
                 role = ownerRole.name,
-                timezone = savedOrg.timezone
+                timezone = savedOrg.timezone,
+                latitude = savedOrg.latitude,
+                longitude = savedOrg.longitude
             )
         )
     }
@@ -285,7 +295,9 @@ class AuthService(
                 name = orgUser.organization.name,
                 plan = orgUser.organization.plan.name,
                 role = orgUser.role.name,
-                timezone = orgUser.organization.timezone
+                timezone = orgUser.organization.timezone,
+                latitude = orgUser.organization.latitude,
+                longitude = orgUser.organization.longitude
             )
         )
     }
@@ -350,7 +362,9 @@ class AuthService(
                 name = orgUser.organization.name,
                 plan = orgUser.organization.plan.name,
                 role = orgUser.role.name,
-                timezone = orgUser.organization.timezone
+                timezone = orgUser.organization.timezone,
+                latitude = orgUser.organization.latitude,
+                longitude = orgUser.organization.longitude
             )
         )
     }
@@ -382,7 +396,9 @@ class AuthService(
                 name = orgUser.organization.name,
                 plan = orgUser.organization.plan.name,
                 role = orgUser.role.name,
-                timezone = orgUser.organization.timezone
+                timezone = orgUser.organization.timezone,
+                latitude = orgUser.organization.latitude,
+                longitude = orgUser.organization.longitude
             )
         )
     }
