@@ -40,6 +40,9 @@ data class Organization(
     @Column
     val longitude: Double? = null,
 
+    @Column(name = "based_in")
+    val basedIn: String? = null,
+
     @Column(nullable = false)
     val timezone: String = "UTC",
 

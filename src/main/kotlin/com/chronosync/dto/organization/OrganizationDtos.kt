@@ -89,5 +89,8 @@ data class UpdateOrganizationRequest(
     val latitude: Double? = null,
 
     @Schema(description = "Longitude of the organization's location", example = "-74.0060")
-    val longitude: Double? = null
+    val longitude: Double? = null,
+
+    @Schema(description = "City or country where the organization is based", example = "New York")
+    val basedIn: String? = null
 )

@@ -55,7 +55,10 @@ data class OrganizationInfoRegisterDto(
     val latitude: Double? = null,
 
     @Schema(description = "Longitude of the organization's location", example = "-74.0060")
-    val longitude: Double? = null
+    val longitude: Double? = null,
+
+    @Schema(description = "City or country where the organization is based", example = "New York")
+    val basedIn: String? = null
 )
 
 data class AuthResponse(
@@ -110,7 +113,10 @@ data class OrganizationDto(
     val latitude: Double? = null,
 
     @Schema(description = "Longitude of the organization's location")
-    val longitude: Double? = null
+    val longitude: Double? = null,
+
+    @Schema(description = "City or country where the organization is based")
+    val basedIn: String? = null
 )
 
 data class ForgotPasswordRequest(

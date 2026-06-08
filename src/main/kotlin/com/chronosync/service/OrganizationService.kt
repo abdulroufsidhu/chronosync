@@ -249,6 +249,7 @@ class OrganizationService(
             name = request.name ?: organization.name,
             latitude = lat,
             longitude = lng,
+            basedIn = request.basedIn ?: organization.basedIn,
             timezone = timezone,
             updatedAt = Instant.now()
         )
@@ -261,7 +262,8 @@ class OrganizationService(
             role = principal.role,
             timezone = saved.timezone,
             latitude = saved.latitude,
-            longitude = saved.longitude
+            longitude = saved.longitude,
+            basedIn = saved.basedIn
         )
     }
 

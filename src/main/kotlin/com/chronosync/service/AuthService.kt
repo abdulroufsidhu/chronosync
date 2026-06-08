@@ -71,7 +71,8 @@ class AuthService(
                 role = orgUser.role.name,
                 timezone = orgUser.organization.timezone,
                 latitude = orgUser.organization.latitude,
-                longitude = orgUser.organization.longitude
+                longitude = orgUser.organization.longitude,
+                basedIn = orgUser.organization.basedIn
             )
         )
     }
@@ -111,6 +112,7 @@ class AuthService(
             currentUsage = 0,
             latitude = lat,
             longitude = lng,
+            basedIn = request.organization.basedIn,
             timezone = timezone,
             nextReset = Instant.now().plus(30, ChronoUnit.DAYS)
         )
@@ -155,7 +157,8 @@ class AuthService(
                 role = ownerRole.name,
                 timezone = savedOrg.timezone,
                 latitude = savedOrg.latitude,
-                longitude = savedOrg.longitude
+                longitude = savedOrg.longitude,
+                basedIn = savedOrg.basedIn
             )
         )
     }
@@ -297,7 +300,8 @@ class AuthService(
                 role = orgUser.role.name,
                 timezone = orgUser.organization.timezone,
                 latitude = orgUser.organization.latitude,
-                longitude = orgUser.organization.longitude
+                longitude = orgUser.organization.longitude,
+                basedIn = orgUser.organization.basedIn
             )
         )
     }
@@ -364,7 +368,8 @@ class AuthService(
                 role = orgUser.role.name,
                 timezone = orgUser.organization.timezone,
                 latitude = orgUser.organization.latitude,
-                longitude = orgUser.organization.longitude
+                longitude = orgUser.organization.longitude,
+                basedIn = orgUser.organization.basedIn
             )
         )
     }
@@ -398,7 +403,8 @@ class AuthService(
                 role = orgUser.role.name,
                 timezone = orgUser.organization.timezone,
                 latitude = orgUser.organization.latitude,
-                longitude = orgUser.organization.longitude
+                longitude = orgUser.organization.longitude,
+                basedIn = orgUser.organization.basedIn
             )
         )
     }
